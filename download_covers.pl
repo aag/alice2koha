@@ -22,7 +22,8 @@ my $outdir_path = $ARGV[2];
 
 open my $fh, $infile_path or die "Could not open $infile_path: $!";
 
-my $isbn_checker = CheckDigits('ISBN');
+my $isbn_checker = CheckDigits('isbn');
+my $isbn13_checker = CheckDigits('isbn13');
 
 my $count = 0;
 while (my $isbn = <$fh>) { 
@@ -37,7 +38,7 @@ while (my $isbn = <$fh>) {
     }
 
 
-    if (!$isbn_checker->is_valid($isbn)) {
+    if (!$isbn_checker->is_valid($isbn) && !$isbn13_checker->is_valid($isbn)) {
         print " Invalid ISBN. Skipping.\n";
         next;
     }
