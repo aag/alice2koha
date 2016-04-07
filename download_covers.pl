@@ -22,18 +22,22 @@ my $outdir_path = $ARGV[2];
 open my $fh, $infile_path or die "Could not open $infile_path: $!";
 
 my $count = 0;
-while (my $line = <$fh>) { 
+while (my $isbn = <$fh>) { 
     $count++;
-    chomp($line);
-    print $count . ": " . $line . "\n";
+    chomp($isbn);
+    print $count . ": " . $isbn . "\n";
+
+    my $outfile_path = $outdir_path . $isbn . ".jpg";
+    if (-e $outfile_path) {
+        next;
+    }
     
-    my $uri = "http://www.librarything.com/devkey/" . $api_key . "/large/isbn/" . $line;
+    my $uri = "http://www.librarything.com/devkey/" . $api_key . "/large/isbn/" . $isbn;
     my $ff = File::Fetch->new(uri => $uri);
 
     my $where = $ff->fetch( to => $outdir_path );
     my $old_filepath = $outdir_path . $ff->output_file;
-    my $new_filepath = $outdir_path . $ff->output_file . ".jpg";
-    rename $old_filepath, $new_filepath;
+    rename $old_filepath, $outfile_path;
     
     sleep 1;
 }
