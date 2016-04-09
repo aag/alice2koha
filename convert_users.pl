@@ -38,7 +38,7 @@ open my $outFileHandle, ">:encoding(utf8)", $outputPath or die "$outputPath: $!"
 
 $inCsv->column_names($inCsv->getline($inFileHandle));
 
-my @headerRow = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship ethnicity ethnotes sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy patron_attributes);
+my @headerRow = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy);
 $outCsv->print($outFileHandle, \@headerRow);
 
 while (my $row = $inCsv->getline_hr($inFileHandle)) {
@@ -49,6 +49,26 @@ while (my $row = $inCsv->getline_hr($inFileHandle)) {
     if ($dob eq "/  /" or $dob eq "") {
         $dob = $row->{"User defined field 2"};
     }
+
+    $dob =~ s/\//-/g;
+
+    my $patronCategory = "N";
+    my $aliceCategory = $row->{"User Loan Category"};
+    if ($aliceCategory eq "reduced") {
+        $patronCategory = "R";
+    } elsif ($aliceCategory =~ /Volunteer/) {
+        $patronCategory = "V";
+    } elsif ($aliceCategory eq "VHS Teacher or Hon.") {
+        $patronCategory = "VHS";
+    }
+
+    my $dateEnrolled = $row->{"Membership Start Date"};
+    $dateEnrolled =~ s/\//-/g;
+    my $dateExpiry = $row->{"Membership expiry date"};
+    $dateExpiry =~ s/\//-/g;
+
+    my $username = lc($row->{"Given name"} . $row->{Surname});
+    $username =~ s/[ \(\)!-\.\+]//g;
 
     my @outRow = [
         $row->{Barcode}, # cardnumber
@@ -82,10 +102,10 @@ while (my $row = $inCsv->getline_hr($inFileHandle)) {
         "", # B_email
         "", # B_phone
         $dob, # dateofbirth
-        "", # branchcode
-        "", # categorycode
-        $row->{"Membership Start Date"}, # dateenrolled
-        $row->{"Membership expiry date"}, # dateexpiry
+        "IELD", # branchcode
+        $patronCategory, # categorycode
+        $dateEnrolled, # dateenrolled
+        $dateExpiry, # dateexpiry
         "", # gonenoaddress
         "", # lost
         "", # debarred
@@ -96,12 +116,10 @@ while (my $row = $inCsv->getline_hr($inFileHandle)) {
         "", # guarantorid
         "", # borrowernotes
         "", # relationship
-        $row->{"User defined field 1"}, # ethnicity
-        "", # ethnotes
         $row->{Sex}, # sex
-        "", # password
+        "demopatron", # password
         "", # flags
-        "", # userid
+        $username, # userid
         "", # opacnote
         "", # contactnote
         "", # sort1
@@ -117,7 +135,6 @@ while (my $row = $inCsv->getline_hr($inFileHandle)) {
         "", # altcontactphone
         "", # smsalertnumber
         "", # privacy
-        "", # patron_attributes
     ];
     $outCsv->print($outFileHandle, @outRow);
 }
