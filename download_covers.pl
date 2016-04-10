@@ -9,7 +9,7 @@ use warnings;
 
 use Algorithm::CheckDigits;
 use File::Fetch;
-use Storable qw(nstore_fd fd_retrieve);
+use Storable qw(nstore retrieve);
 
 my $numArgs = @ARGV;
 if ($numArgs != 3) {
@@ -33,15 +33,10 @@ my %downloaded_covers;
 my $errors = 0;
 
 if (-e $downloaded_covers_path && -s $downloaded_covers_path > 0) {
-    open(my $downloaded_covers_fh, $downloaded_covers_path) or die "Could not open $downloaded_covers_path: $!";
-
-    %downloaded_covers = %{fd_retrieve($downloaded_covers_fh)};
+    %downloaded_covers = %{retrieve($downloaded_covers_path)};
     print "Downloaded covers loaded. " . scalar(keys %downloaded_covers) . " covers found.\n";
-
-    close($downloaded_covers_fh);
 }
 
-open(my $downloaded_covers_fh, '>', $downloaded_covers_path) or die "Could not open $downloaded_covers_path: $!";
 while (my $isbn = <$in_fh>) { 
     $count++;
     chomp($isbn);
@@ -102,8 +97,7 @@ while (my $isbn = <$in_fh>) {
     $download_count++;
     $downloaded_covers{$isbn} = 1;
     if (!($download_count % 10)) {
-        seek $downloaded_covers_fh,0,0;
-        nstore_fd \%downloaded_covers, $downloaded_covers_fh;
+        nstore \%downloaded_covers, $downloaded_covers_path;
         print " ->"
     }
     
@@ -113,11 +107,9 @@ while (my $isbn = <$in_fh>) {
 }
 
 print "Saving downloaded covers list\n";
-seek $downloaded_covers_fh,0,0;
-nstore_fd \%downloaded_covers, $downloaded_covers_fh;
+nstore \%downloaded_covers, $downloaded_covers_path;
 
 close($in_fh);
-close($downloaded_covers_fh);
 
 if (!$errors) {
     print "\nDone. All ISBNs have been processed.\n";
