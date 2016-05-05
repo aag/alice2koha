@@ -14,6 +14,16 @@ use warnings;
 use Algorithm::CheckDigits;
 use MARC::Batch;
 
+# The categories that have items with EANs and not ISBNs
+my %ean_categories = (
+    "[DVD]" => 1,
+    "[Compact Disc]" => 1,
+);
+
+# ======================================
+# = No customization needed below here =
+# ======================================
+
 my $numArgs = @ARGV;
 if ($numArgs != 1) {
     print "Usage: find_invalid_isbns.pl <INPUT>\n";
@@ -37,18 +47,22 @@ while (my $record = $batch->next()) {
             && !$isbn13_checker->is_valid($isbn)
         ) {
 
-            my $aliceType = "unknown";
-            if ($record->field('245') && $record->field('245')->subfield('h')) {
-                $aliceType = $record->field('245')->subfield('h');
-                if ($aliceType eq "[DVD]" || $aliceType eq "[Compact Disc]") {
-                    next;
-                }
-            }
-
-            my $title = "unknown";
-
+            my $title = "unknown title";
             if ($record->field('245') && $record->field('245')->subfield('a')) {
                 $title = $record->field('245')->subfield('a');
+            }
+
+            my $aliceType = "unknown type";
+            if ($record->field('245') && $record->field('245')->subfield('h')) {
+                $aliceType = $record->field('245')->subfield('h');
+
+                # If the category contains items with EAN identifiers, then
+                # also allow valid EANs
+                if (exists $ean_categories{$aliceType}
+                    && $ean_checker->is_valid($isbn)
+                ) {
+                    next;
+                }
             }
 
             print "$isbn, $title, $aliceType\n";
