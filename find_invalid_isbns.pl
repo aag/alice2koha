@@ -13,11 +13,41 @@ use warnings;
 
 use Algorithm::CheckDigits;
 use MARC::Batch;
+use Scalar::Util qw(looks_like_number);
 
 # The categories that have items with EANs and not ISBNs
 my %ean_categories = (
-    "[DVD]" => 1,
-    "[Compact Disc]" => 1,
+    '[DVD]' => 1,
+    '[Compact Disc]' => 1,
+);
+
+# The location abbreviations that are used on the spine stickers
+my %location_abbreviations = (
+    '0 - General works' => '0',
+    '1 - Philosophy' => '1',
+    '2 - Religion' => '2',
+    '3 - Social Sciences' => '3',
+    '4 - Language' => '4',
+    '5 - Pure Sciences' => '5',
+    '6 - Applied Sciences' => '6',
+    '7 - Arts&Recreations' => '7',
+    '8 - Literature' => '8',
+    '9 - History' => '9',
+    'Biography' => 'B',
+    'Biography Collection' => 'BC',
+    'Course Book' => 'CB',
+    'Detective Stories' => 'X',
+    'Easy Readers' => 'ER',
+    'Fiction' => '',
+    'Graphic Books' => 'G',
+    'Juvenile Fiction' => 'JF',
+    'Juvenile Non-Fiction' => 'JF',
+    'Reference' => 'R',
+    'Science Fiction' => 'SF',
+    'Short Stories' => 'SS',
+    'Short-Story Coll.' => 'SSC',
+    'TESL' => 'TESL',
+    'Travel' => 'T',
 );
 
 # ======================================
@@ -47,12 +77,12 @@ while (my $record = $batch->next()) {
             && !$isbn13_checker->is_valid($isbn)
         ) {
 
-            my $title = "unknown title";
+            my $title = 'unknown title';
             if ($record->field('245') && $record->field('245')->subfield('a')) {
                 $title = $record->field('245')->subfield('a');
             }
 
-            my $aliceType = "unknown type";
+            my $aliceType = 'unknown type';
             if ($record->field('245') && $record->field('245')->subfield('h')) {
                 $aliceType = $record->field('245')->subfield('h');
 
@@ -65,7 +95,39 @@ while (my $record = $batch->next()) {
                 }
             }
 
-            print "$isbn, $title, $aliceType\n";
+            my $loc_abbr = '';
+            my $location = 'unknown location';
+            if ($record->field('852') && $record->field('852')->subfield('k')) {
+                $location = $record->field('852')->subfield('k');
+                $loc_abbr = $location_abbreviations{$location};
+            }
+
+            my $classification_num = '';
+            my $item_num = '';
+            if ($record->field('082')) {
+                if ($record->field('082')->subfield('a')) {
+                    $classification_num = $record->field('082')->subfield('a');
+                }
+
+                if ($record->field('082')->subfield('b')) {
+                    $item_num = $record->field('082')->subfield('b');
+                }
+            }
+
+            my $sticker = $loc_abbr;
+            
+            # Rules for how location is printed on spine sticker
+            if ($loc_abbr ne '' && !looks_like_number($loc_abbr)) {
+                $sticker .= ' ';
+            }
+
+            if ($classification_num ne '') {
+                $classification_num .= ' ';
+            }
+
+            $sticker .= "$classification_num$item_num";
+
+            print "$isbn, $title, $aliceType, $location, sticker: '$sticker'\n";
             next;
         }
     }
