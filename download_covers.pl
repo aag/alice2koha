@@ -11,8 +11,8 @@ use Algorithm::CheckDigits;
 use File::Fetch;
 use Storable qw(nstore retrieve);
 
-my $numArgs = @ARGV;
-if ($numArgs != 3) {
+my $num_args = @ARGV;
+if ($num_args != 3) {
     print "Usage: download_covers.pl <API_KEY> <INPUT_FILE> <OUTPUT_DIR>\n";
     exit;
 }
