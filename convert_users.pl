@@ -14,34 +14,34 @@ use Text::CSV;
 
 use Data::Dumper;
 
-my $numArgs = @ARGV;
-if ($numArgs != 2) {
+my $num_args = @ARGV;
+if ($num_args != 2) {
     print "Usage: convert_users.pl <INPUT> <OUTPUT>\n";
     exit;
 }
 
-my $inputPath = $ARGV[0];
-my $outputPath = $ARGV[1];
+my $input_path = $ARGV[0];
+my $output_path = $ARGV[1];
 
-my $inCsv = Text::CSV->new({
+my $in_csv = Text::CSV->new({
     binary => 1,
 }) or die "Cannot use CSV: " . Text::CSV->error_diag();
 
-my $outCsv = Text::CSV->new({
+my $out_csv = Text::CSV->new({
     binary => 1,
 }) or die "Cannot use CSV: " . Text::CSV->error_diag();
 
-$outCsv->eol("\n");
+$out_csv->eol("\n");
 
-open my $inFileHandle, "<:encoding(utf8)", $inputPath or die "$inputPath: $!";
-open my $outFileHandle, ">:encoding(utf8)", $outputPath or die "$outputPath: $!";
+open my $in_file_handle, "<:encoding(utf8)", $input_path or die "$input_path: $!";
+open my $out_file_handle, ">:encoding(utf8)", $output_path or die "$output_path: $!";
 
-$inCsv->column_names($inCsv->getline($inFileHandle));
+$in_csv->column_names($in_csv->getline($in_file_handle));
 
-my @headerRow = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy);
-$outCsv->print($outFileHandle, \@headerRow);
+my @header_row = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy);
+$out_csv->print($out_file_handle, \@header_row);
 
-while (my $row = $inCsv->getline_hr($inFileHandle)) {
+while (my $row = $in_csv->getline_hr($in_file_handle)) {
     $row->{Barcode} =~ m/^B/ or next; # Exclude old-style borrower IDs
     $row->{"Membership expiry date"} =~ m/2016|2017/ or next;
 
@@ -52,25 +52,25 @@ while (my $row = $inCsv->getline_hr($inFileHandle)) {
 
     $dob =~ s/\//-/g;
 
-    my $patronCategory = "N";
-    my $aliceCategory = $row->{"User Loan Category"};
-    if ($aliceCategory eq "reduced") {
-        $patronCategory = "R";
-    } elsif ($aliceCategory =~ /Volunteer/) {
-        $patronCategory = "V";
-    } elsif ($aliceCategory eq "VHS Teacher or Hon.") {
-        $patronCategory = "VHS";
+    my $patron_category = "N";
+    my $alice_catgory = $row->{"User Loan Category"};
+    if ($alice_catgory eq "reduced") {
+        $patron_category = "R";
+    } elsif ($alice_catgory =~ /Volunteer/) {
+        $patron_category = "V";
+    } elsif ($alice_catgory eq "VHS Teacher or Hon.") {
+        $patron_category = "VHS";
     }
 
-    my $dateEnrolled = $row->{"Membership Start Date"};
-    $dateEnrolled =~ s/\//-/g;
-    my $dateExpiry = $row->{"Membership expiry date"};
-    $dateExpiry =~ s/\//-/g;
+    my $date_enrolled = $row->{"Membership Start Date"};
+    $date_enrolled =~ s/\//-/g;
+    my $date_expiry = $row->{"Membership expiry date"};
+    $date_expiry =~ s/\//-/g;
 
     my $username = lc($row->{"Given name"} . $row->{Surname});
     $username =~ s/[ \(\)!-\.\+]//g;
 
-    my @outRow = [
+    my @out_row = [
         $row->{Barcode}, # cardnumber
         $row->{Surname}, # surname
         $row->{"Given name"}, # firstname
@@ -103,9 +103,9 @@ while (my $row = $inCsv->getline_hr($inFileHandle)) {
         "", # B_phone
         $dob, # dateofbirth
         "IELD", # branchcode
-        $patronCategory, # categorycode
-        $dateEnrolled, # dateenrolled
-        $dateExpiry, # dateexpiry
+        $patron_category, # categorycode
+        $date_enrolled, # dateenrolled
+        $date_expiry, # dateexpiry
         "", # gonenoaddress
         "", # lost
         "", # debarred
@@ -136,10 +136,10 @@ while (my $row = $inCsv->getline_hr($inFileHandle)) {
         "", # smsalertnumber
         "", # privacy
     ];
-    $outCsv->print($outFileHandle, @outRow);
+    $out_csv->print($out_file_handle, @out_row);
 }
-$inCsv->eof or $inCsv->error_diag();
+$in_csv->eof or $in_csv->error_diag();
 
-close $inFileHandle or die "$outputPath: $!";
-close $outFileHandle or die "$outputPath: $!";
+close $in_file_handle or die "$output_path: $!";
+close $out_file_handle or die "$output_path: $!";
 
