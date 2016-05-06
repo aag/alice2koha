@@ -85,7 +85,7 @@ my $output_path = $ARGV[1];
 
 my $batch = MARC::Batch->new('USMARC', $input_path);
 
-open(OUTPUT, "> $output_path") or die $!;
+open(my $out_fh, "> $output_path") or die $!;
 while (my $record = $batch->next()) {
     my $koha_holdings_field = MARC::Field->new(
         952, '', '',
@@ -137,8 +137,8 @@ while (my $record = $batch->next()) {
 
     $record->append_fields($koha_holdings_field);
 
-    print OUTPUT $record->as_usmarc();
+    print $out_fh $record->as_usmarc();
 }
 
-close(OUTPUT);
+close($out_fh);
 

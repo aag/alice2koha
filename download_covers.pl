@@ -114,5 +114,3 @@ close($in_fh);
 if (!$errors) {
     print "\nDone. All ISBNs have been processed.\n";
 }
-
-

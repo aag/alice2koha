@@ -33,15 +33,15 @@ my $out_csv = Text::CSV->new({
 
 $out_csv->eol("\n");
 
-open my $in_file_handle, "<:encoding(utf8)", $input_path or die "$input_path: $!";
-open my $out_file_handle, ">:encoding(utf8)", $output_path or die "$output_path: $!";
+open(my $in_fh, "<:encoding(utf8)", $input_path) or die "$input_path: $!";
+open(my $out_fh, ">:encoding(utf8)", $output_path) or die "$output_path: $!";
 
-$in_csv->column_names($in_csv->getline($in_file_handle));
+$in_csv->column_names($in_csv->getline($in_fh));
 
 my @header_row = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy);
-$out_csv->print($out_file_handle, \@header_row);
+$out_csv->print($out_fh, \@header_row);
 
-while (my $row = $in_csv->getline_hr($in_file_handle)) {
+while (my $row = $in_csv->getline_hr($in_fh)) {
     $row->{Barcode} =~ m/^B/ or next; # Exclude old-style borrower IDs
     $row->{"Membership expiry date"} =~ m/2016|2017/ or next;
 
@@ -136,10 +136,10 @@ while (my $row = $in_csv->getline_hr($in_file_handle)) {
         "", # smsalertnumber
         "", # privacy
     ];
-    $out_csv->print($out_file_handle, @out_row);
+    $out_csv->print($out_fh, @out_row);
 }
 $in_csv->eof or $in_csv->error_diag();
 
-close $in_file_handle or die "$output_path: $!";
-close $out_file_handle or die "$output_path: $!";
+close($in_fh) or die "$output_path: $!";
+close($out_fh) or die "$output_path: $!";
 
