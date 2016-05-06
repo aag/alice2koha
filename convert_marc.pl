@@ -74,68 +74,68 @@ my %ccodes = (
 # = No customization needed below here =
 # ======================================
 
-my $numArgs = @ARGV;
-if ($numArgs != 2) {
+my $num_args = @ARGV;
+if ($num_args != 2) {
     print "Usage: convert_marc.pl <INPUT> <OUTPUT>\n";
     exit;
 }
 
-my $inputPath = $ARGV[0];
-my $outputPath = $ARGV[1];
+my $input_path = $ARGV[0];
+my $output_path = $ARGV[1];
 
-my $batch = MARC::Batch->new('USMARC', $inputPath);
+my $batch = MARC::Batch->new('USMARC', $input_path);
 
-open(OUTPUT, "> $outputPath") or die $!;
+open(OUTPUT, "> $output_path") or die $!;
 while (my $record = $batch->next()) {
-    my $kohaHoldingsField = MARC::Field->new(
+    my $koha_holdings_field = MARC::Field->new(
         952, '', '',
         'a' => BRANCH, # Home branch AKA owning library
         'b' => BRANCH, # Holding branch
     );
 
     my $barcode;
-    my $itemType;
-    my $collectionCode;
+    my $item_type;
+    my $collection_code;
 
     # Item type (e.g. Text, DVD, CD)
     if ($record->field('245') && $record->field('245')->subfield('h')) {
-        my $aliceType = $record->field('245')->subfield('h');
-        $itemType = $types{$aliceType};
+        my $alice_type = $record->field('245')->subfield('h');
+        $item_type = $types{$alice_type};
     }
 
     # 852 is a repeating field
-    my @fields852 = $record->field('852');
-    foreach my $field852 (@fields852) {
+    my @fields_852 = $record->field('852');
+    foreach my $field_852 (@fields_852) {
         # Barcode
-        if ($field852->subfield('p')) {
-            $barcode = $field852->subfield('p');
+        if ($field_852->subfield('p')) {
+            $barcode = $field_852->subfield('p');
         }
 
         # Collection code (e.g. Fiction, Biography)
-        if ($field852->subfield('k')) {
-            my $aliceCollectionCode = $field852->subfield('k');
-            if (!$ccodes{$aliceCollectionCode}) {
-                print $aliceCollectionCode . "\n";
-                $collectionCode = $aliceCollectionCode;
+        if ($field_852->subfield('k')) {
+            my $alice_collection_code = $field_852->subfield('k');
+            if (!$ccodes{$alice_collection_code}) {
+                print $alice_collection_code . "\n";
+                $collection_code = $alice_collection_code;
             } else {
-                $collectionCode = $ccodes{$aliceCollectionCode};
+                $collection_code = $ccodes{$alice_collection_code};
             }
         }
     }
 
     if ($barcode) {
-        $kohaHoldingsField->add_subfields('p', $barcode);
+        $koha_holdings_field->add_subfields('p', $barcode);
     }
 
-    if ($collectionCode) {
-        $kohaHoldingsField->add_subfields('8', $collectionCode);
+    if ($collection_code) {
+        $koha_holdings_field->add_subfields('8', $collection_code);
     }
 
-    if ($itemType) {
-        $kohaHoldingsField->add_subfields('y', $itemType);
+    if ($item_type) {
+        $koha_holdings_field->add_subfields('y', $item_type);
     }
 
-    $record->append_fields($kohaHoldingsField);
+    $record->append_fields($koha_holdings_field);
 
     print OUTPUT $record->as_usmarc();
 }
