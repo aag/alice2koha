@@ -54,19 +54,19 @@ my %location_abbreviations = (
 # = No customization needed below here =
 # ======================================
 
-my $numArgs = @ARGV;
-if ($numArgs != 1) {
+my $num_args = @ARGV;
+if ($num_args != 1) {
     print "Usage: find_invalid_isbns.pl <INPUT>\n";
     exit;
 }
 
-my $inputPath = $ARGV[0];
+my $input_path = $ARGV[0];
 
 my $isbn_checker = CheckDigits('isbn');
 my $isbn13_checker = CheckDigits('isbn13');
 my $ean_checker = CheckDigits('ean');
 
-my $batch = MARC::Batch->new('USMARC', $inputPath);
+my $batch = MARC::Batch->new('USMARC', $input_path);
 
 while (my $record = $batch->next()) {
     if ($record->field('020') && $record->field('020')->subfield('a')) {
@@ -82,13 +82,13 @@ while (my $record = $batch->next()) {
                 $title = $record->field('245')->subfield('a');
             }
 
-            my $aliceType = 'unknown type';
+            my $alice_type = 'unknown type';
             if ($record->field('245') && $record->field('245')->subfield('h')) {
-                $aliceType = $record->field('245')->subfield('h');
+                $alice_type = $record->field('245')->subfield('h');
 
                 # If the category contains items with EAN identifiers, then
                 # also allow valid EANs
-                if (exists $ean_categories{$aliceType}
+                if (exists $ean_categories{$alice_type}
                     && $ean_checker->is_valid($isbn)
                 ) {
                     next;
@@ -127,7 +127,7 @@ while (my $record = $batch->next()) {
 
             $sticker .= "$classification_num$item_num";
 
-            print "$isbn, $title, $aliceType, $location, sticker: '$sticker'\n";
+            print "$isbn, $title, $alice_type, $location, sticker: '$sticker'\n";
             next;
         }
     }
