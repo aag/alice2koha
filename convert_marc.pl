@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
-# This script takes a "USMARC export with copy information" data export from
+# This script takes a "USMARC export with copy information" data export
+# in the "Text file - Unicode (.txt)" format from
 # Alice and converts it to a MARC file that can be imported into Koha.
 #
 # One preprocessing step on the input file is needed before running this script:
@@ -37,24 +38,24 @@ my %types = (
     '[Game]' => 'GAME',
     '[Other]' => 'OTHER',
     '[Picture]' => 'PICTURE',
-    '[Sound Recording]' => 'CD',
+    '[Sound Recording]' => 'SOUND',
     '[Text]' => 'TEXT',
-    '[Video recording]' => 'DVD',
+    '[Video recording]' => 'VIDEO',
 );
 
 my %ccodes = (
-    '0 - General works' => 'General Works',
-    '1 - Philosophy' => 'Philosophy',
-    '2 - Religion' => 'Religion',
-    '3 - Social Sciences' => 'Social Sciences',
-    '4 - Language' => 'Language',
-    '5 - Pure Sciences' => 'Pure Sciences',
-    '6 - Applied Sciences' => 'Applied Sciences',
-    '7 - Arts&Recreations' => 'Arts Recreation',
-    '8 - Literature' => 'Literature',
-    '9 - History' => 'History',
+    '0 - General works' => '0 - General Works',
+    '1 - Philosophy' => '1 - Philosophy',
+    '2 - Religion' => '2 - Religion',
+    '3 - Social Sciences' => '3 - Social Sciences',
+    '4 - Language' => '4 - Language',
+    '5 - Pure Sciences' => '5 - Pure Sciences',
+    '6 - Applied Sciences' => '6 - Applied Sciences',
+    '7 - Arts&Recreations' => '7 - Arts & Recreations',
+    '8 - Literature' => '8 - Literature',
+    '9 - History' => '9 - History',
     'Biography' => 'Biography',
-    'Biography Collection' => 'Biography',
+    'Biography Collection' => 'Biography Collection',
     'Course Book' => 'Course Book',
     'Detective Stories' => 'Detective Stories',
     'Easy Readers' => 'Easy Readers',
@@ -65,7 +66,7 @@ my %ccodes = (
     'Reference' => 'Reference',
     'Science Fiction' => 'Science Fiction',
     'Short Stories' => 'Short Stories',
-    'Short-Story Coll.' => 'Short Stories',
+    'Short-Story Coll.' => 'Short-Story Collection',
     'TESL' => 'TESL',
     'Travel' => 'Travel',
 );
