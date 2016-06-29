@@ -1,11 +1,19 @@
 #!/usr/bin/perl
 
-# This script takes the "Borrowers Detail Export" from Alice 6.0 and
+# This script takes the "Borrowers Detail Export" in the
+# "Text file - Unicode (.txt)" format from Alice 6.0 and
 # converts it to a patrons import file for Koha 3.22.
 #
-# Two preprocessing steps are needed before running this script:
-# 1. Convert the exported tsv file from UTF-16 to UTF-8.
-# 2. Convert the tsv file to csv (e.g. with Gnumeric).
+# A preprocessing step is needed before running this script:
+# you must convert the exported .dat file from UTF-16 to UTF-8.
+# $ iconv -f UTF-16LE -t UTF-8 -o BORRWB00.tsv BORRWB00.dat
+#
+# Additionally, you must set up the Patron categories in the
+# Koha administration interface, which can be reached under
+# "Administration" -> "Patron categories".
+#
+# TODO: parse address into structured fields
+# TODO: combine all comment fields and write them to borrowernotes
 
 use strict;
 use warnings;
@@ -25,6 +33,11 @@ my $output_path = $ARGV[1];
 
 my $in_csv = Text::CSV->new({
     binary => 1,
+    quote_char => '¸',
+    escape_char => "\\",
+    sep_char => "\t",
+    allow_loose_quotes => 1,
+    allow_loose_escapes => 1,
 }) or die "Cannot use CSV: " . Text::CSV->error_diag();
 
 my $out_csv = Text::CSV->new({
@@ -41,9 +54,12 @@ $in_csv->column_names($in_csv->getline($in_fh));
 my @header_row = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy);
 $out_csv->print($out_fh, \@header_row);
 
+my $member_count = 0;
 while (my $row = $in_csv->getline_hr($in_fh)) {
     $row->{Barcode} =~ m/^B/ or next; # Exclude old-style borrower IDs
-    $row->{"Membership expiry date"} =~ m/2016|2017/ or next;
+    
+    # Uncomment this line to exclude expired memberships
+    #$row->{"Membership expiry date"} =~ m/2016|2017|2018|2019|2020/ or next;
 
     my $dob = $row->{"Date Of Birth (DOB)"};
     if ($dob eq "/  /" or $dob eq "") {
@@ -53,13 +69,18 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     $dob =~ s/\//-/g;
 
     my $patron_category = "N";
-    my $alice_catgory = $row->{"User Loan Category"};
-    if ($alice_catgory eq "reduced") {
+    my $alice_category = $row->{"User Loan Category"};
+    if ($alice_category eq "reduced") {
         $patron_category = "R";
-    } elsif ($alice_catgory =~ /Volunteer/) {
+    } elsif ($alice_category =~ /Volunteer/) {
         $patron_category = "V";
-    } elsif ($alice_catgory eq "VHS Teacher or Hon.") {
+    } elsif ($alice_category eq "VHS Teacher or Hon.") {
         $patron_category = "VHS";
+    }
+
+    my $debarred = "";
+    if ($alice_category =~ "Banned") {
+        $debarred = "9999-12-31";
     }
 
     my $date_enrolled = $row->{"Membership Start Date"};
@@ -70,6 +91,22 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     my $username = lc($row->{"Given name"} . $row->{Surname});
     $username =~ s/[ \(\)!-\.\+]//g;
 
+    my $address = $row->{"Street Number"};
+    if ($row->{"Street Name"}) {
+        $address .= " " . $row->{"Street Name"};
+    }
+
+    if ($row->{"Address Line 1"}) {
+        $address .= " " . $row->{"Address Line 1"};
+    }
+
+    if ($row->{"Address Line 2"}) {
+        $address .= " " . $row->{"Address Line 2"};
+    }
+
+    # Trim whitespace around the address
+    $address =~ s/^\s+|\s+$//g;
+
     my @out_row = [
         $row->{Barcode}, # cardnumber
         $row->{Surname}, # surname
@@ -77,10 +114,10 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         $row->{"Mailing title"}, # title
         "", # othernames
         "", # initials
-        $row->{"Street Number"}, # streetnumber
-        $row->{"Street Name"}, # streettype
-        $row->{"Address Line 1"}, # address
-        $row->{"Address Line 2"}, # address2
+        "", # streetnumber
+        "", # streettype
+        $address, # address
+        "", # address2
         "", # city
         "", # state
         $row->{Postcode}, # zipcode
@@ -108,7 +145,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         $date_expiry, # dateexpiry
         "", # gonenoaddress
         "", # lost
-        "", # debarred
+        $debarred, # debarred
         "", # debarredcomment
         "", # contactname
         "", # contactfirstname
@@ -137,9 +174,12 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         "", # privacy
     ];
     $out_csv->print($out_fh, @out_row);
+    $member_count += 1;
 }
 $in_csv->eof or $in_csv->error_diag();
 
 close($in_fh) or die "$output_path: $!";
 close($out_fh) or die "$output_path: $!";
+
+print("Member count: $member_count\n");
 
