@@ -14,6 +14,8 @@
 #
 # TODO: parse address into structured fields
 # TODO: combine all comment fields and write them to borrowernotes
+# TODO: Record country of origin
+# TODO: make exclusions and categories configurable
 
 use strict;
 use warnings;
@@ -61,12 +63,31 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     # Uncomment this line to exclude expired memberships
     #$row->{"Membership expiry date"} =~ m/2016|2017|2018|2019|2020/ or next;
 
-    my $dob = $row->{"Date Of Birth (DOB)"};
-    if ($dob eq "/  /" or $dob eq "") {
-        $dob = $row->{"User defined field 2"};
-    }
+    # There are 4 different fields which might contain the DOB
+    my @dob_fields = (
+        "Date Of Birth (DOB)",
+        "User defined field 2",
+        "User defined field 6",
+        "User defined field 7",
+    );
 
-    $dob =~ s/\//-/g;
+    my $dob = "";
+    foreach my $field (@dob_fields) {
+        # Try to parse various formats like 01.01.1999, 1/1/99, 01,1,1999
+        if ($row->{$field} =~ /^(\d?\d)\D(\d?\d)\D(\d\d|\d\d\d\d)$/) {
+            my $day = $1;
+            my $month = $2;
+            my $year = $3;
+
+            if (length $year == 2) {
+                $year = "19$year";
+            }
+
+            $dob = "$day-$month-$year";
+
+            last;
+        }
+    }
 
     my $patron_category = "N";
     my $alice_category = $row->{"User Loan Category"};
