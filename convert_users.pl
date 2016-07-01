@@ -33,6 +33,133 @@ if ($num_args != 2) {
 my $input_path = $ARGV[0];
 my $output_path = $ARGV[1];
 
+binmode(STDOUT, ":utf8");
+
+# Takes several address fields from the Alice export and
+# attempts to parse out a structured address from them.
+sub parse_address {
+    my ($street_num, $street_name, $addr_1, $addr_2, $addr_3, $postcode) = @_;
+
+    my $out_street_name = "";
+    my $out_street_num = "";
+    my $out_postcode = "";
+    my $out_city = "";
+    my $out_addr_2 = "";
+
+    if ($street_num eq "" && $addr_3 eq "" &&
+        (($addr_1 eq "" && $addr_2 =~ /(\d\d\d\d\d )?\w+$/) ||
+            ($addr_2 eq "" && $addr_1 =~ /(\d\d\d\d\d )?\w+$/)) &&
+        ($postcode eq "" || $postcode =~ /^\d\d\d\d\d$/)) {
+        # This is the most common case. The street name and number is in
+        # $street_name and the postcode and city are in $addr_1 or $addr_2
+        if ($street_name =~ /(\D+) ?(\d+.*)$/) {
+            $out_street_name = $1;
+            $out_street_num = $2;
+            $out_street_num =~ s/,$//;
+        }
+
+        my $postcode_city = $addr_1;
+        if ($postcode_city eq "") {
+            $postcode_city = $addr_2;
+        }
+
+        if ($postcode_city =~ /(\d\d\d\d\d) +(\w+.*)$/) {
+            $out_postcode = $1;
+            $out_city = $2;
+        } elsif ($postcode =~ /\d\d\d\d\d/) {
+            $out_postcode = $postcode;
+            $out_city = $postcode_city;
+        } elsif ($postcode_city =~ /^\w+$/) {
+            $out_city = $postcode_city;
+        }
+    } elsif ($street_num =~ /^\D+$/ && $street_name =~ /^\d+/ &&
+        $addr_3 eq "" &&
+        (($addr_1 eq "" && $addr_2 =~ /(\d\d\d\d\d )?\w+$/) ||
+            ($addr_2 eq "" && $addr_1 =~ /(\d\d\d\d\d )?\w+$/)) &&
+        ($postcode eq "" || $postcode =~ /^\d\d\d\d\d$/)) {
+        # In this case, Alice managed to correctly identify the street
+        # name and number, but they are stored in the opposite fields as
+        # labeled, since the order is opposite in German and English.
+        $out_street_name = $street_num;
+        $out_street_num = $street_name;
+        $out_street_num =~ s/,$//;
+
+        my $postcode_city = $addr_1;
+        if ($postcode_city eq "") {
+            $postcode_city = $addr_2;
+        }
+
+        if ($postcode_city =~ /(\d\d\d\d\d) +(\w+.*)$/) {
+            $out_postcode = $1;
+            $out_city = $2;
+        } elsif ($postcode =~ /\d\d\d\d\d/) {
+            $out_postcode = $postcode;
+            $out_city = $postcode_city;
+        } elsif ($postcode_city =~ /^\w+$/) {
+            $out_city = $postcode_city;
+        }
+    } elsif ($street_num =~ /^\D+$/ && $street_name =~ /^\D+\d+/ &&
+        $addr_3 eq "" &&
+        (($addr_1 eq "" && $addr_2 =~ /(\d\d\d\d\d )?\w+$/) ||
+            ($addr_2 eq "" && $addr_1 =~ /(\d\d\d\d\d )?\w+$/)) &&
+        ($postcode eq "" || $postcode =~ /^\d\d\d\d\d$/)) {
+        # In this case, Alice split up the street name across $street_num
+        # and $street_name. Sometimes it does it in the middle of a word and
+        # sometimes between words. We use the capitalization of the first
+        # letter and some known starting word in $street_name to try to figure
+        # out if the split happened between words or not.
+        my $street_addr = $street_num . $street_name;
+        if ($street_name =~ /^[[:upper:]]/ || $street_name =~ /^(dem|der) /) {
+            $street_addr = $street_num . " " . $street_name;
+        }
+
+        if ($street_addr =~ /(\D+) ?(\d+.*)$/) {
+            $out_street_name = $1;
+            $out_street_num = $2;
+            $out_street_num =~ s/,$//;
+        } 
+
+        my $postcode_city = $addr_1;
+        if ($postcode_city eq "") {
+            $postcode_city = $addr_2;
+        }
+
+        if ($postcode_city =~ /(\d\d\d\d\d) +(\w+.*)$/) {
+            $out_postcode = $1;
+            $out_city = $2;
+        } elsif ($postcode =~ /\d\d\d\d\d/) {
+            $out_postcode = $postcode;
+            $out_city = $postcode_city;
+        } elsif ($postcode_city =~ /^\w+$/) {
+            $out_city = $postcode_city;
+        } 
+    } elsif ($street_num eq "c/o" && $street_name ne "" &&
+        $addr_1 ne "" && $addr_2 =~ /\d\d\d\d\d \w+$/) {
+        # There's a "care of" line
+        $out_addr_2 = "c/o $street_name";
+
+        if ($addr_1 =~ /(\D+) ?(\d+.*)$/) {
+            $out_street_name = $1;
+            $out_street_num = $2;
+            $out_street_num =~ s/,$//;
+        }
+
+        if ($addr_2 =~ /(\d\d\d\d\d) +(\w+.*)$/) {
+            $out_postcode = $1;
+            $out_city = $2;
+        }
+    }
+
+    return (
+        "street_name" => $out_street_name,
+        "street_num" => $out_street_num,
+        "postcode" => $out_postcode,
+        "city" => $out_city,
+        "address2" => $out_addr_2,
+    );
+}
+
+
 my $in_csv = Text::CSV->new({
     binary => 1,
     quote_char => '¸',
@@ -112,21 +239,21 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     my $username = lc($row->{"Given name"} . $row->{Surname});
     $username =~ s/[ \(\)!-\.\+]//g;
 
-    my $address = $row->{"Street Number"};
-    if ($row->{"Street Name"}) {
-        $address .= " " . $row->{"Street Name"};
-    }
+    my %address = parse_address(
+        $row->{"Street Number"},
+        $row->{"Street Name"},
+        $row->{"Address Line 1"},
+        $row->{"Address Line 2"},
+        $row->{"Address Line 3"},
+        $row->{"Postcode"},
+    );
 
-    if ($row->{"Address Line 1"}) {
-        $address .= " " . $row->{"Address Line 1"};
-    }
-
-    if ($row->{"Address Line 2"}) {
-        $address .= " " . $row->{"Address Line 2"};
-    }
-
-    # Trim whitespace around the address
-    $address =~ s/^\s+|\s+$//g;
+    # Uncomment to output unparseable addresses
+    #if ($address{'street_num'} eq "" || $address{'street_name'} eq "" ||
+        #$address{'city'} eq "" || $address{'postcode'} eq "") {
+        #print($row->{Barcode} . ": " . $row->{Surname} .
+            #", " . $row->{"Given name"} . "\n");
+    #}
 
     my @out_row = [
         $row->{Barcode}, # cardnumber
@@ -135,13 +262,13 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         $row->{"Mailing title"}, # title
         "", # othernames
         "", # initials
-        "", # streetnumber
+        $address{'street_num'}, # streetnumber
         "", # streettype
-        $address, # address
-        "", # address2
-        "", # city
+        $address{'street_name'}, # address
+        $address{'address2'}, # address2
+        $address{'city'}, # city
         "", # state
-        $row->{Postcode}, # zipcode
+        $address{'postcode'}, # zipcode
         "", # country
         $row->{Email}, # email
         $row->{"Home Phone"}, # phone
