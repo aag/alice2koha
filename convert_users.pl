@@ -12,7 +12,6 @@
 # Koha administration interface, which can be reached under
 # "Administration" -> "Patron categories".
 #
-# TODO: combine all comment fields and write them to borrowernotes
 # TODO: make exclusions and categories configurable
 
 use strict;
@@ -479,6 +478,34 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         $password .= substr($pass_dict, int(rand($pass_dict_len)), 1);
     }
 
+    # Combine all comment fields into one string, if they exist
+    my $comment_start_col = 3;
+    my $user_def_3_len = length $row->{"User defined field 3"};
+    my $user_def_4_len = length $row->{"User defined field 4"};
+    if ($user_def_3_len < 10 || $user_def_4_len == 4) {
+        # For some borrowers, previous columns get pushed into the user
+        # defined fields in the export. If that's the case with this user,
+        # exclude those columns from the borrower note.
+        $comment_start_col = 11;
+    }
+
+    my $notes = "";
+    for (my $i = $comment_start_col; $i < 21; $i++) {
+        my $col_name = "User defined field $i";
+        if ($row->{$col_name} && $row->{$col_name} ne "") {
+            $notes .= $row->{$col_name} . " ";
+        }
+    }
+
+    # Trim whitespace
+    $notes =~ s/^\s+|\s+$//g;
+
+    # A couple of patrons have 1-character notes for some reason. Clean them
+    # up.
+    if (length $notes < 2) {
+        $notes = "";
+    }
+
     my @out_row = [
         $row->{Barcode}, # cardnumber
         $row->{Surname}, # surname
@@ -523,7 +550,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         "", # contactfirstname
         "", # contacttitle
         "", # guarantorid
-        "", # borrowernotes
+        $notes, # borrowernotes
         "", # relationship
         $row->{Sex}, # sex
         $password, # password
