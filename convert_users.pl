@@ -403,9 +403,9 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     }
 
     my $date_enrolled = $row->{"Membership Start Date"};
-    $date_enrolled =~ s/\//-/g;
+    $date_enrolled =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/g;
     my $date_expiry = $row->{"Membership expiry date"};
-    $date_expiry =~ s/\//-/g;
+    $date_expiry =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/g;
 
     my $username = lc($row->{"Given name"} . $row->{Surname});
     $username =~ s/[ \(\)!-\.\+]//g;
@@ -445,7 +445,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
 
     if (!$countries{$country}) {
         if ($country ne "") {
-            print "Missing country: '$country'\n";
+            #print "Missing country: '$country'\n";
             $country = "";
         }
     } else {
@@ -454,7 +454,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
 
     if ($country2 ne "") {
         if (!$countries{$country2}) {
-            print "Missing country: '$country2'\n";
+            #print "Missing country: '$country2'\n";
             $country2 = "";
         } else {
             $country2 = $countries{$country2};
