@@ -12,9 +12,7 @@
 # Koha administration interface, which can be reached under
 # "Administration" -> "Patron categories".
 #
-# TODO: parse address into structured fields
 # TODO: combine all comment fields and write them to borrowernotes
-# TODO: Record country of origin
 # TODO: make exclusions and categories configurable
 
 use strict;
@@ -159,6 +157,178 @@ sub parse_address {
     );
 }
 
+my %countries = (
+    'Algerian' => 'Algeria',
+    'american' => 'United States of America',
+    'America' => 'United States of America',
+    'American' => 'United States of America',
+    'Ameican' => 'United States of America',
+    'Australia' => 'Australia',
+    'australian' => 'Australia',
+    'Australian' => 'Australia',
+    'Austrian' => 'Austria',
+    'Bahamian' => 'Bahamas',
+    'Bangladeshi' => 'Bangladesh',
+    'Belarus' => 'Belarus',
+    'Belgian' => 'Belgium',
+    'Botswana' => 'Botswana',
+    'Brasilian' => 'Brazil',
+    'Brazil' => 'Brazil',
+    'Brazilian' => 'Brazil',
+    'British' => 'United Kingdom',
+    'Britisch' => 'United Kingdom',
+    'bulgarian' => 'Bulgaria',
+    'Bulgarian' => 'Bulgaria',
+    'canadian' => 'Canadia',
+    'Canadian' => 'Canadia',
+    'Chilean' => 'Chile',
+    'Chinese' => 'China',
+    'Congolesian' => 'Congo, Democratic Republic of the',
+    'Croatia' => 'Croatia',
+    'Croatian' => 'Croatia',
+    'Czech' => 'Czech Republic',
+    'Danish' => 'Denmark',
+    'Danmark' => 'Denmark',
+    'Denmark' => 'Denmark',
+    'deutsch' => 'Germany',
+    'Deutsch' => 'Germany',
+    'Dutch' => 'Netherlands',
+    'Ecuadorian' => 'Ecuador',
+    'Egypt' => 'Egypt',
+    'Egyptian' => 'Egypt',
+    'Eire' => 'Ireland',
+    'english' => 'United Kingdom',
+    'English' => 'United Kingdom',
+    'Estonia' => 'Estonia',
+    'Estonian' => 'Estonia',
+    'Finnish' => 'Finland',
+    'Francaise' => 'France',
+    'French' => 'France',
+    'german' => 'Germany',
+    'Geman' => 'Germany',
+    'German' => 'Germany',
+    'German .' => 'Germany',
+    'Georgian' => 'Georgia',
+    'Georgisch' => 'Georgia',
+    'Greek' => 'Greece',
+    'Hungary' => 'Hungary',
+    'Hungarian' => 'Hungary',
+    'India' => 'India',
+    'indian' => 'India',
+    'Indian' => 'India',
+    'Indien' => 'India',
+    'Indonesia' => 'Indonesia',
+    'Indonesian' => 'Indonesia',
+    'Indonisian' => 'Indonesia',
+    'iran' => 'Iran',
+    'Iran' => 'Iran',
+    'Iranian' => 'Iran',
+    'irish' => 'Ireland',
+    'Irish' => 'Ireland',
+    'Irish. British' => 'Ireland',
+    'Israeli' => 'Israel',
+    'Israelian' => 'Israel',
+    'italian' => 'Italy',
+    'Italian' => 'Italy',
+    'Italien' => 'Italy',
+    'Japan' => 'Japan',
+    'Japanese' => 'Japan',
+    'Japaneses' => 'Japan',
+    'Jemen' => 'Yemen',
+    'JPN' => 'Japan',
+    'Kasachisch' => 'Kazakhstan',
+    'Kenya' => 'Kenya',
+    'Korea' => 'South Korea',
+    'Korean' => 'South Korea',
+    'Kyrgyz' => 'Kyrgyzstan',
+    'Kyrgyz Republic' => 'Kyrgyzstan',
+    'Latvian' => 'Latvia',
+    'Litauen' => 'Lithuania',
+    'Lithuanian' => 'Lithuania',
+    'Malaysia' => 'Malaysia',
+    'malaysian' => 'Malaysia',
+    'Malaysian' => 'Malaysia',
+    'Marrocan' => 'Morocco',
+    'Mauritian' => 'Mauritius',
+    'Mexican' => 'Mexico',
+    'Moldavian' => 'Moldova',
+    'Mongolian' => 'Mongolia',
+    'Netherland' => 'Netherlands',
+    'Netherlands' => 'Netherlands',
+    'New Zealand' => 'New Zealand',
+    'Nigeria' => 'Nigeria',
+    'Nigerian' => 'Nigeria',
+    'Norway' => 'Norway',
+    'norwegian' => 'Norway',
+    'Norwegian' => 'Norway',
+    'Österreich' => 'Austria',
+    'Pakistan' => 'Pakistan',
+    'Pakistani' => 'Pakistan',
+    'Palestinian' => 'Palestine',
+    'Persian' => 'Iran',
+    'Peruanian' => 'Peru',
+    'Peruvian' => 'Peru',
+    'Philippines' => 'Philippines',
+    'Polen' => 'Poland',
+    'polish' => 'Poland',
+    'Polish' => 'Poland',
+    'Polnisch' => 'Poland',
+    'Portugese' => 'Portugal',
+    'Portuguese' => 'Portugal',
+    'Republic of Congo' => 'Congo, Republic of the',
+    'Romania' => 'Romania',
+    'Romanian' => 'Romania',
+    'Rumanian' => 'Romania',
+    'Rumänisch' => 'Romania',
+    'russian federation' => 'Russia',
+    'Russian' => 'Russia',
+    'russisch' => 'Russia',
+    'Russisch' => 'Russia',
+    'Saudi Arabian' => 'Saudi Arabia',
+    'Schwedisch' => 'Sweden',
+    'Scotland' => 'United Kingdom',
+    'Scottish' => 'United Kingdom',
+    'Serbian' => 'Serbia',
+    'Singapore' => 'Singapore',
+    'Singaporean' => 'Singapore',
+    'Singapur' => 'Singapore',
+    'Slovac' => 'Slovakia',
+    'Slovakian' => 'Slovakia',
+    'Somalian' => 'Somalia',
+    'South African' => 'South Africa',
+    'Spanish' => 'Spain',
+    'Spanissh' => 'Spain',
+    'Sri Lanka' => 'Sri Lanka',
+    'Swedish' => 'Sweden',
+    'Swiss' => 'Switzerland',
+    'Syria' => 'Syria',
+    'Syrian' => 'Syria',
+    'Syrien' => 'Syria',
+    'Taiwanese' => 'Taiwan',
+    'Tanzanian' => 'Tanzania',
+    'Trinidadian' => 'Trinidad',
+    'Turkiye' => 'Turkey',
+    'Turkish' => 'Turkey',
+    'Türkish' => 'Turkey',
+    'Türkisch' => 'Turkey',
+    'Ukraine' => 'Ukraine',
+    'Ucrainian' => 'Ukraine',
+    'UK' => 'United Kingdom',
+    'Ukrainian' => 'Ukraine',
+    'usa' => 'United States of America',
+    'USA' => 'United States of America',
+    'US-American' => 'United States of America',
+    'US' => 'United States of America',
+    'US American' => 'United States of America',
+    'Usbekin' => 'Uzbekistan',
+    'Usbekistan' => 'Uzbekistan',
+    'Uzbek' => 'Uzbekistan',
+    'U. S.' => 'United States of America',
+    'Venezuela' => 'Venezuela',
+    'Vietnam' => 'Vietnam',
+    'Vietnamese' => 'Vietnam',
+    'Vietnamesisch' => 'Vietnam',
+);
 
 my $in_csv = Text::CSV->new({
     binary => 1,
@@ -180,7 +350,7 @@ open(my $out_fh, ">:encoding(utf8)", $output_path) or die "$output_path: $!";
 
 $in_csv->column_names($in_csv->getline($in_fh));
 
-my @header_row = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy);
+my @header_row = qw(cardnumber surname firstname title othernames initials streetnumber streettype address address2 city state zipcode country email phone mobile fax emailpro phonepro B_streetnumber B_streettype B_address B_address2 B_city B_state B_zipcode B_country B_email B_phone dateofbirth branchcode categorycode dateenrolled dateexpiry gonenoaddress lost debarred debarredcomment contactname contactfirstname contacttitle guarantorid borrowernotes relationship sex password flags userid opacnote contactnote sort1 sort2 altcontactfirstname altcontactsurname altcontactaddress1 altcontactaddress2 altcontactaddress3 altcontactstate altcontactzipcode altcontactcountry altcontactphone smsalertnumber privacy patron_attributes);
 $out_csv->print($out_fh, \@header_row);
 
 my $member_count = 0;
@@ -255,6 +425,50 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
             #", " . $row->{"Given name"} . "\n");
     #}
 
+    my $country = "";
+    my $country2 = "";
+    if ((length $row->{"User defined field 1"}) > 1) {
+        $country = $row->{"User defined field 1"};
+    } elsif ((length $row->{"User defined field 5"}) > 1) {
+        $country = $row->{"User defined field 5"};
+    }
+
+    if ($country =~ /(.*)[\/\-,](.*)/) {
+        $country = $1;
+        $country2 = $2;
+    }
+
+    # Trim whitespace
+    $country =~ s/^\s+|\s+$//g;
+    $country2 =~ s/^\s+|\s+$//g;
+
+    if (!$countries{$country}) {
+        if ($country ne "") {
+            print "Missing country: '$country'\n";
+            $country = "";
+        }
+    } else {
+        $country = $countries{$country};
+    }
+
+    if ($country2 ne "") {
+        if (!$countries{$country2}) {
+            print "Missing country: '$country2'\n";
+            $country2 = "";
+        } else {
+            $country2 = $countries{$country2};
+        }
+    }
+    
+    my $patron_attributes = "";
+    if ($country ne "") {
+        $patron_attributes = "\"COUNTRY:$country\"";
+    }
+
+    if ($country2 ne "") {
+        $patron_attributes .= ",\"COUNTRY:$country2\"";
+    }
+
     my @out_row = [
         $row->{Barcode}, # cardnumber
         $row->{Surname}, # surname
@@ -320,6 +534,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         "", # altcontactphone
         "", # smsalertnumber
         "", # privacy
+        $patron_attributes, # patron_attributes
     ];
     $out_csv->print($out_fh, @out_row);
     $member_count += 1;
