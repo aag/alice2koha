@@ -490,9 +490,30 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     }
 
     my $notes = "";
+
+    if ($row->{Comment}) {
+        $notes .= $row->{Comment};
+        # Trim whitespace
+        $notes =~ s/^\s+|\s+$//g;
+        if (!($notes =~ /[\.\!]$/)) {
+            $notes .= ".";
+        }
+        $notes .= " ";
+    }
+
+    if ($row->{Message}) {
+        $notes .= $row->{Message};
+        # Trim whitespace
+        $notes =~ s/^\s+|\s+$//g;
+        if (!($notes =~ /[\.\!]$/)) {
+            $notes .= ".";
+        }
+        $notes .= " ";
+    }
+
     for (my $i = $comment_start_col; $i < 21; $i++) {
         my $col_name = "User defined field $i";
-        if ($row->{$col_name} && $row->{$col_name} ne "") {
+        if ($row->{$col_name} && length $row->{$col_name} > 1) {
             $notes .= $row->{$col_name} . " ";
         }
     }
