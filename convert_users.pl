@@ -471,6 +471,14 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         $patron_attributes .= ",\"COUNTRY:$country2\"";
     }
 
+    # Generate a sort-of random password
+    my $pass_dict = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    my $pass_dict_len = length $pass_dict;
+    my $password = "";
+    for (my $i = 0; $i < 24; $i++) {
+        $password .= substr($pass_dict, int(rand($pass_dict_len)), 1);
+    }
+
     my @out_row = [
         $row->{Barcode}, # cardnumber
         $row->{Surname}, # surname
@@ -518,7 +526,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         "", # borrowernotes
         "", # relationship
         $row->{Sex}, # sex
-        "demopatron", # password
+        $password, # password
         "", # flags
         $username, # userid
         "", # opacnote
