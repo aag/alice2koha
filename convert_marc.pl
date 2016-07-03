@@ -52,6 +52,19 @@ my %types = (
     '[Video recording]' => 'VIDEO',
 );
 
+my %material_types = (
+    'CASSETTE' => 'i',
+    'CD' => 'i',
+    'DVD' => 'g',
+    'FLASHCARD' => 'a',
+    'GAME' => 'r',
+    'OTHER' => 'p',
+    'PICTURE' => 'k',
+    'SOUND' => 'i',
+    'TEXT' => 'a',
+    'VIDEO' => 'g',
+);
+
 my %ccodes = (
     '0 - General works' => '0 - General Works',
     '1 - Philosophy' => '1 - Philosophy',
@@ -144,6 +157,7 @@ while (my $record = $batch->next()) {
         }
     }
 
+
     if ($barcode) {
         $koha_holdings_field->add_subfields('p', $barcode);
     }
@@ -155,6 +169,13 @@ while (my $record = $batch->next()) {
     if ($item_type) {
         $koha_entries_field->add_subfields('c', $item_type);
         $koha_holdings_field->add_subfields('y', $item_type);
+
+        # Set material type in the leader
+        my $material_type = $material_types{$item_type};
+        my $leader_substring = 'n' . $material_type . 'm';
+        my $leader = $record->leader();
+        $leader =~ s/nam/$leader_substring/g;
+        $record->leader($leader);
     }
 
     $record->append_fields($koha_entries_field);
