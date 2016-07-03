@@ -4,8 +4,13 @@
 # in the "Text file - Unicode (.txt)" format from
 # Alice and converts it to a MARC file that can be imported into Koha.
 #
-# One preprocessing step on the input file is needed before running this script:
+# Two preprocessing steps on the input file is needed before running this
+# script:
 # 1. Convert the exported .dat file from UTF-16 to UTF-8.
+#    $ iconv -f UTF-16LE -t UTF-8 -o alice_export.mrc MARCXB01.dat
+#
+# 2. Open the file in MarcEdit and remove the first entry, which just contains
+#    the name of the library.
 #
 # Make sure to configure the BRANCH and %types values below.
 # - This script (and Alice itself?) only supports items that are located in a
@@ -30,6 +35,10 @@ use warnings;
 use MARC::Batch;
 
 use constant BRANCH => "IELD";
+
+# ddc is Dewey Decimal Classification
+use constant CLASSIFICATION => "ddc";
+
 my %types = (
     '[Audio Cassette]' => 'CASSETTE',
     '[Compact Disc]' => 'CD',
@@ -94,6 +103,11 @@ while (my $record = $batch->next()) {
         'b' => BRANCH, # Holding branch
     );
 
+    my $koha_entries_field = MARC::Field->new(
+        942, '', '',
+        '2' => CLASSIFICATION, # Source of classification or shelving scheme
+    );
+
     my $barcode;
     my $item_type;
     my $collection_code;
@@ -102,6 +116,12 @@ while (my $record = $batch->next()) {
     if ($record->field('245') && $record->field('245')->subfield('h')) {
         my $alice_type = $record->field('245')->subfield('h');
         $item_type = $types{$alice_type};
+    }
+
+    # Cataloging source
+    if ($record->field('040')) {
+        # Add transcribing agency
+        $record->field('040')->add_subfields('c', BRANCH);
     }
 
     # 852 is a repeating field
@@ -133,9 +153,11 @@ while (my $record = $batch->next()) {
     }
 
     if ($item_type) {
+        $koha_entries_field->add_subfields('c', $item_type);
         $koha_holdings_field->add_subfields('y', $item_type);
     }
 
+    $record->append_fields($koha_entries_field);
     $record->append_fields($koha_holdings_field);
 
     print $out_fh $record->as_usmarc();
