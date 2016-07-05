@@ -1,14 +1,45 @@
 #!/usr/bin/perl
 
-# This script takes a text file with 1 ISBN number per line and downloads the
+# This script takes a "USMARC export with copy information" data export
+# in the "Text file - Unicode (.txt)" format from Alice and downloads the
 # cover image for that ISBN from LibraryThing to the hard drive. The images
 # are named ISBN.jpg.
+#
+# Two preprocessing steps on the input file is needed before running this
+# script:
+# 1. Convert the exported .dat file from UTF-16 to UTF-8.
+#    $ iconv -f UTF-16LE -t UTF-8 -o alice_export.mrc MARCXB01.dat
+#
+# 2. Open the file in MarcEdit and remove the first entry, which just contains
+#    the name of the library.
+#
+# After downloading the covers, you also need to create an idlink.txt file
+# to map the biblionumbers to image files:
+# 1. Dump the biblionumbers and ISBNs from the Koha database by running this
+#    MySQL query:
+#    SELECT biblionumber, isbn
+#    FROM biblioitems
+#    WHERE isbn IS NOT NULL
+#    INTO OUTFILE '/tmp/isbn_biblio.txt'
+#    FIELDS TERMINATED BY ','
+#    LINES TERMINATED BY '\n';
+#
+# 2. Transfer the file /tmp/isbn_biblio.txt to the computer with the alice2koha
+#    repo on it.
+# 3. Add the image file extensions with this command:
+#    $ sed 's/$/.jpg/' biblio_isbn.txt > idlink.txt
+# 4. Add all the images and the idlink.txt file to a zip file.
+# 5. Make sure the Apache and PHP max file upload sizes are set to a value
+#    larger than the zip file.
+# 6. Upload the zip file to Koha on the "Upload local cover image" page in
+#    "Administration" -> "Tools".
 
 use strict;
 use warnings;
 
 use Algorithm::CheckDigits;
 use File::Fetch;
+use MARC::Batch;
 use Storable qw(nstore retrieve);
 
 my $num_args = @ARGV;
@@ -20,9 +51,10 @@ if ($num_args != 3) {
 my $api_key = $ARGV[0];
 my $infile_path = $ARGV[1];
 my $outdir_path = $ARGV[2];
+if (!($outdir_path =~ /\/$/)) {
+    $outdir_path .= '/';
+}
 my $downloaded_covers_path = "downloaded_covers.bin";
-
-open(my $in_fh, $infile_path) or die "Could not open $infile_path: $!";
 
 my $isbn_checker = CheckDigits('isbn');
 my $isbn13_checker = CheckDigits('isbn13');
@@ -37,8 +69,15 @@ if (-e $downloaded_covers_path && -s $downloaded_covers_path > 0) {
     print "Downloaded covers loaded. " . scalar(keys %downloaded_covers) . " covers found.\n";
 }
 
-while (my $isbn = <$in_fh>) { 
+my $batch = MARC::Batch->new('USMARC', $infile_path);
+while (my $record = $batch->next()) {
+    if (!$record->field('020') || !$record->field('020')->subfield('a')) {
+        print "No ISBN found.\n";
+        next;
+    }
     $count++;
+
+    my $isbn = $record->field('020')->subfield('a');
     chomp($isbn);
     print $count . ": " . $isbn;
 
@@ -80,7 +119,7 @@ while (my $isbn = <$in_fh>) {
 
     my $filesize = -s $dl_filepath;
     if (!(defined $filesize)) {
-        print " Could not get filesize. Maybe your daily quota has been used.\n";
+        print " Could not get filesize for file $dl_filepath. Maybe your daily quota has been used.\n";
         $errors = 1;
         last;
     }
@@ -108,8 +147,6 @@ while (my $isbn = <$in_fh>) {
 
 print "Saving downloaded covers list\n";
 nstore \%downloaded_covers, $downloaded_covers_path;
-
-close($in_fh);
 
 if (!$errors) {
     print "\nDone. All ISBNs have been processed.\n";
