@@ -387,14 +387,14 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         }
     }
 
-    my $patron_category = "NORMAL";
+    my $patron_category = "N";
     my $alice_category = $row->{"User Loan Category"};
     if ($alice_category eq "reduced") {
-        $patron_category = "REDUCED";
+        $patron_category = "R";
     } elsif ($alice_category eq "Volunteer (normal)") {
-        $patron_category = "VOLUNTEER";
+        $patron_category = "V";
     } elsif ($alice_category eq "Volunteer (reduced)") {
-        $patron_category = "RVOLUNTEER";
+        $patron_category = "VR";
     } elsif ($alice_category eq "VHS Teacher or Hon.") {
         $patron_category = "VHS";
     }
