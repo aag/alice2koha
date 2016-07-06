@@ -1,9 +1,8 @@
-package Util::Checksum;
+package Util::Barcode;
 use strict;
 use warnings;
 
 use Exporter qw(import);
- 
 our @EXPORT_OK = qw(add_check_digit);
 
 my %check_digits = (

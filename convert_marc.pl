@@ -36,7 +36,7 @@ use MARC::Batch;
 
 use lib '.';
 
-use Util::Checksum qw(add_check_digit);
+use Util::Barcode qw(add_check_digit);
 
 use constant BRANCH => "IELD";
 

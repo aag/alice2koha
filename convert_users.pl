@@ -21,7 +21,7 @@ use lib '.';
 
 use Data::Dumper;
 use Text::CSV;
-use Util::Checksum qw(add_check_digit);
+use Util::Barcode qw(add_check_digit);
 
 my $num_args = @ARGV;
 if ($num_args != 2) {
