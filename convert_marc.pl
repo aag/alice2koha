@@ -162,6 +162,15 @@ while (my $record = $batch->next()) {
         }
     }
 
+    # Add the first number to the Dewey Decimal Classification Number
+    my $ddc_num;
+    if ($record->field('082') && $record->field('082')->subfield('a') &&
+        $collection_code && $collection_code =~ /^\d/
+    ) {
+        my $short_ddc = $record->field('082')->subfield('a');
+        my $first_digit = substr($collection_code, 0, 1);
+        $ddc_num = "$first_digit$short_ddc";
+    }
 
     if ($barcode) {
         $koha_holdings_field->add_subfields('p', $barcode);
@@ -181,6 +190,11 @@ while (my $record = $batch->next()) {
         my $leader = $record->leader();
         $leader =~ s/nam/$leader_substring/g;
         $record->leader($leader);
+    }
+
+    if ($ddc_num) {
+        $record->field('082')->update('a', $ddc_num);
+        $koha_holdings_field->add_subfields('o', $ddc_num);
     }
 
     $record->append_fields($koha_entries_field);
