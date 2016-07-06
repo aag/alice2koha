@@ -17,9 +17,11 @@
 use strict;
 use warnings;
 
-use Text::CSV;
+use lib '.';
 
 use Data::Dumper;
+use Text::CSV;
+use Util::Checksum qw(add_check_digit);
 
 my $num_args = @ARGV;
 if ($num_args != 2) {
@@ -527,8 +529,10 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         $notes = "";
     }
 
+    my $barcode = add_check_digit($row->{Barcode});
+
     my @out_row = [
-        $row->{Barcode}, # cardnumber
+        $barcode, # cardnumber
         $row->{Surname}, # surname
         $row->{"Given name"}, # firstname
         $row->{"Mailing title"}, # title
