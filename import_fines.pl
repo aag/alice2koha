@@ -1,8 +1,7 @@
 #!/usr/bin/perl
 
-# This script takes a "Fine Statistics" report from Alice 6.0 and creates
-# a CSV file that can be imported into the accountlines table in a Koha
-# database to record the current fines.
+# This script takes a "Fine Statistics" report from Alice 6.0 and imports it
+# into the accountlines table in a Koha database to record the current fines.
 #
 # A preprocessing step is needed before running this script:
 # you must convert the exported .dat file from UTF-16 to UTF-8.
@@ -11,9 +10,11 @@
 use strict;
 use warnings;
 
+use Util::Barcode qw(add_check_digit);
+
 my $num_args = @ARGV;
 if ($num_args != 1) {
-    print "Usage: create_fines_import.pl <INPUT>\n";
+    print "Usage: import_fines.pl <INPUT>\n";
     exit;
 }
 
@@ -31,8 +32,8 @@ while (my $line = <$in_fh>) {
 
     if ($line =~ /^(B\d+).*    (R\d+)      .*0\.00       (\d+\.\d+)\s+(\d\d\/\d\d\/\d\d\d\d)/) {
         # This is an overdue fine
-        my $patron_barcode = $1;
-        my $biblio_barcode = $2;
+        my $patron_barcode = add_check_digit($1);
+        my $biblio_barcode = add_check_digit($2);
         my $fine_amount = $3;
         my $fine_date = $4;
 
@@ -42,7 +43,7 @@ while (my $line = <$in_fh>) {
         print "Overdue charge: $patron_barcode\t$biblio_barcode\t$fine_amount\t$fine_date\n";
     } elsif ($line =~ /^(B\d+)    .*0\.00       (\d+\.\d+)\s+(\d\d\/\d\d\/\d\d\d\d)/) {
         # This is a membership fee
-        my $patron_barcode = $1;
+        my $patron_barcode = add_check_digit($1);
         my $fee_amount = $2;
         my $fee_date = $3;
 
