@@ -98,13 +98,26 @@ while (my $line = <$in_fh>) {
     } elsif ($line =~ /^(B\d+)    .*0\.00       (\d+\.\d+)\s+(\d\d\/\d\d\/\d\d\d\d)/) {
         # This is a membership fee
         my $patron_barcode = add_check_digit($1);
-        my $fee_amount = $2;
-        my $fee_date = $3;
+        my $fine_amount = $2;
+        my $fine_date = $3;
 
+        my $borrowernumber = get_borrowernumber($dbh, $patron_barcode);
+        if ($borrowernumber == 0) {
+            next;
+        }
+        
         # Convert date to ISO format
-        $fee_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
+        $fine_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
 
-        print "Membership charge: $patron_barcode\t$fee_amount\t$fee_date\n";
+        print "Membership charge: $patron_barcode\t$fine_amount\t$fine_date\n";
+
+        my $query = "
+                INSERT INTO accountlines
+                (borrowernumber, date, amount, description, accounttype, amountoutstanding, timestamp, notify_id, notify_level, manager_id)
+                VALUES
+                (?, ?, ?, '', 'A', ?, ?, 1, 0, 1)";
+            my $insert_sth = $dbh->prepare($query);
+            $insert_sth->execute($borrowernumber, $fine_date, $fine_amount, $fine_amount, "$fine_date 12:00:00");
     }
 }
 
