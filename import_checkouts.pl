@@ -221,8 +221,8 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
 # have to make sure none of the rows in the issues table shares an ID
 # with a row in the old_issues table.
 my $issues_auto_inc = $issue_id + 1;
-my $alter_sth = $dbh->prepare("ALTER TABLE issues AUTO_INCREMENT = ?");
-$alter_sth->execute($issues_auto_inc);
+my $alter_sth = $dbh->prepare("ALTER TABLE issues AUTO_INCREMENT = " . $issues_auto_inc);
+$alter_sth->execute();
 
 print "Importing current checkouts...\n";
 for my $checkout (@current_checkouts) {
