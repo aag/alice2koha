@@ -58,6 +58,30 @@ sub get_borrowernumber {
     return $borrowernumber;
 }
 
+my %items;
+sub get_itemnumber {
+    my $dbh = shift;
+    my $item_barcode = shift;
+
+    if (exists $items{$item_barcode}) {
+        return $items{$item_barcode};
+    }
+
+    my $item_number = 0;
+
+    my $item_sth = $dbh->prepare("SELECT * FROM items WHERE (barcode = ?)");
+    $item_sth->execute($item_barcode);
+
+    my $item = $item_sth->fetchrow_hashref;
+    if ($item) {
+        $item_number = $item->{'itemnumber'};
+    }
+
+    $items{$item_barcode} = $item_number;
+
+    return $item_number;
+}
+
 my $infile_path = $ARGV[0];
 
 my $in_csv = Text::CSV->new({
@@ -93,117 +117,114 @@ my @current_checkouts;
 while (my $row = $in_csv->getline_hr($in_fh)) {
     $issue_id++;
     my $patron_barcode = add_check_digit($row->{'Borr barcode'});
-    my $biblio_barcode = add_check_digit($row->{Barcode});
+    my $item_barcode = add_check_digit($row->{Barcode});
 
     my $borrowernumber = get_borrowernumber($dbh, $patron_barcode);
     if ($borrowernumber == 0) {
         next;
     }
 
-    my $item_sth = $dbh->prepare("SELECT * FROM items WHERE (barcode = ?)");
-    $item_sth->execute($biblio_barcode);
-
-    my $item = $item_sth->fetchrow_hashref;
-    if ($item) {
-        my $item_number = $item->{'itemnumber'};
-
-        my $loan_date = $row->{'Loan date'};
-        my $due_date = $row->{'Due date'};
-        my $returned_date = $row->{'Returned'};
-        my $last_renewal_date;
-        my $num_renewals = $row->{'Renewed'} + 0;
-
-        # Convert date to ISO format
-        $loan_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
-        $due_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
-
-        # If renewed, calculate the last renewal date
-        if ($num_renewals > 0 && $due_date =~ /(\d\d\d\d)-(\d\d)-(\d\d)/) {
-            my $last_renewal_datetime = DateTime->new( 
-                year   => $1,
-                month  => $2,
-                day    => $3,
-                hour   => 14,
-                minute => 0,
-                second => 0
-            );
-
-            $last_renewal_datetime->add(days => -28);
-            $last_renewal_date = $last_renewal_datetime->ymd . ' ' .
-                $last_renewal_datetime->hms;
-        }
-
-        # Koha stores NULL instead of 0 if there have been no renewals
-        if ($num_renewals == 0) {
-            undef $num_renewals;
-        }
-
-        # Get the number of issues for item
-        #my $item_issues_sth = $dbh->prepare("SELECT issues FROM items WHERE itemnumber = ?");
-        #$item_issues_sth->execute($item_number);
-
-        #my $item = $item_issues_sth->fetchrow_hashref;
-        #my $num_issues = 1;
-        #if ($item) {
-            #my $db_num_issues = $item->{'issues'};
-            #if ($db_num_issues) {
-                #$num_issues = $db_num_issues + 1;
-            #}
-        #}
-
-        # Add a time to each date
-        $loan_date .= " 12:00:00";
-        $due_date .= " 23:59:59";
-
-        if ($returned_date eq "  /  /    ") {
-            # This item has not yet been returned
-            push @current_checkouts, {
-                'borrowernumber' => $borrowernumber,
-                'itemnumber' => $item_number,
-                'date_due' => $due_date,
-                'lastreneweddate' => $last_renewal_date,
-                'renewals' => $num_renewals,
-                'issuedate' => $loan_date,
-            };
-
-            #my $onloan_date = substr($due_date, 0, 10);
-
-            #my $item_update_sth = $dbh->prepare("UPDATE items SET issues=?, onloan=?");
-            #$item_update_sth->execute($num_issues, $onloan_date);
-        } else {
-            # Convert date to ISO format
-            $returned_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
-
-            # Add a time to the returned date
-            $returned_date .= " 14:00:00";
-
-            my $query = "
-                INSERT INTO old_issues 
-                (issue_id, borrowernumber, itemnumber, date_due, branchcode, returndate, lastreneweddate, renewals, auto_renew, timestamp, issuedate, onsite_checkout)
-                VALUES
-                (?, ?, ?, ?, 'IELD', ?, ?, ?, 0, ?, ?, 0)";
-            my $insert_sth = $dbh->prepare($query);
-            $insert_sth->execute(
-                $issue_id,
-                $borrowernumber,
-                $item_number,
-                $due_date,
-                $returned_date,
-                $last_renewal_date,
-                $num_renewals,
-                $returned_date,
-                $loan_date
-            );
-
-            #my $item_update_sth = $dbh->prepare("UPDATE items SET issues=?");
-            #$item_update_sth->execute($num_issues);
-        }
-
-        print("borrower: " . $row->{'Borr barcode'} .
-            " ($borrowernumber), item: " . $row->{Barcode} .
-            " ($item_number), Loan date: $loan_date, Due date: $due_date, " .
-            "Returned: $returned_date\n");
+    my $item_number = get_itemnumber($dbh, $item_barcode);
+    if ($item_number == 0) {
+        next;
     }
+
+    my $loan_date = $row->{'Loan date'};
+    my $due_date = $row->{'Due date'};
+    my $returned_date = $row->{'Returned'};
+    my $last_renewal_date;
+    my $num_renewals = $row->{'Renewed'} + 0;
+
+    # Convert date to ISO format
+    $loan_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
+    $due_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
+
+    # If renewed, calculate the last renewal date
+    if ($num_renewals > 0 && $due_date =~ /(\d\d\d\d)-(\d\d)-(\d\d)/) {
+        my $last_renewal_datetime = DateTime->new( 
+            year   => $1,
+            month  => $2,
+            day    => $3,
+            hour   => 14,
+            minute => 0,
+            second => 0
+        );
+
+        $last_renewal_datetime->add(days => -28);
+        $last_renewal_date = $last_renewal_datetime->ymd . ' ' .
+            $last_renewal_datetime->hms;
+    }
+
+    # Koha stores NULL instead of 0 if there have been no renewals
+    if ($num_renewals == 0) {
+        undef $num_renewals;
+    }
+
+    # Get the number of issues for item
+    #my $item_issues_sth = $dbh->prepare("SELECT issues FROM items WHERE itemnumber = ?");
+    #$item_issues_sth->execute($item_number);
+
+    #my $item = $item_issues_sth->fetchrow_hashref;
+    #my $num_issues = 1;
+    #if ($item) {
+        #my $db_num_issues = $item->{'issues'};
+        #if ($db_num_issues) {
+            #$num_issues = $db_num_issues + 1;
+        #}
+    #}
+
+    # Add a time to each date
+    $loan_date .= " 12:00:00";
+    $due_date .= " 23:59:59";
+
+    if ($returned_date eq "  /  /    ") {
+        # This item has not yet been returned
+        push @current_checkouts, {
+            'borrowernumber' => $borrowernumber,
+            'itemnumber' => $item_number,
+            'date_due' => $due_date,
+            'lastreneweddate' => $last_renewal_date,
+            'renewals' => $num_renewals,
+            'issuedate' => $loan_date,
+        };
+
+        #my $onloan_date = substr($due_date, 0, 10);
+
+        #my $item_update_sth = $dbh->prepare("UPDATE items SET issues=?, onloan=?");
+        #$item_update_sth->execute($num_issues, $onloan_date);
+    } else {
+        # Convert date to ISO format
+        $returned_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
+
+        # Add a time to the returned date
+        $returned_date .= " 14:00:00";
+
+        my $query = "
+            INSERT INTO old_issues 
+            (issue_id, borrowernumber, itemnumber, date_due, branchcode, returndate, lastreneweddate, renewals, auto_renew, timestamp, issuedate, onsite_checkout)
+            VALUES
+            (?, ?, ?, ?, 'IELD', ?, ?, ?, 0, ?, ?, 0)";
+        my $insert_sth = $dbh->prepare($query);
+        $insert_sth->execute(
+            $issue_id,
+            $borrowernumber,
+            $item_number,
+            $due_date,
+            $returned_date,
+            $last_renewal_date,
+            $num_renewals,
+            $returned_date,
+            $loan_date
+        );
+
+        #my $item_update_sth = $dbh->prepare("UPDATE items SET issues=?");
+        #$item_update_sth->execute($num_issues);
+    }
+
+    print("borrower: " . $row->{'Borr barcode'} .
+        " ($borrowernumber), item: " . $row->{Barcode} .
+        " ($item_number), Loan date: $loan_date, Due date: $due_date, " .
+        "Returned: $returned_date\n");
 }
 
 # Since the issue_id values get transferred from issues to old_issues, we
