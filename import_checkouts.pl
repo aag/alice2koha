@@ -35,9 +35,14 @@ if ($num_args != 1) {
     exit;
 }
 
+my %borrowers;
 sub get_borrowernumber {
     my $dbh = shift;
     my $patron_barcode = shift;
+
+    if (exists $borrowers{$patron_barcode}) {
+        return $borrowers{$patron_barcode};
+    }
 
     my $borrowernumber = 0;
     my $patron_sth = $dbh->prepare("SELECT * FROM borrowers WHERE cardnumber = ?");
@@ -47,6 +52,8 @@ sub get_borrowernumber {
     if ($borrower) {
         $borrowernumber = $borrower->{'borrowernumber'};
     }
+
+    $borrowers{$patron_barcode} = $borrowernumber;
 
     return $borrowernumber;
 }
