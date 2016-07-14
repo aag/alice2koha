@@ -114,6 +114,13 @@ if ($old_issue) {
 # go through the file.
 my @current_checkouts;
 
+# Collect the total number of times each item has been checked out and,
+# if currently checked out, the due date.
+my %times_issued;
+my %current_onloan_date;
+
+print "Importing old checkouts...\n";
+
 while (my $row = $in_csv->getline_hr($in_fh)) {
     $issue_id++;
     my $patron_barcode = add_check_digit($row->{'Borr barcode'});
@@ -129,6 +136,12 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         next;
     }
 
+    if (exists $times_issued{$item_number}) {
+        $times_issued{$item_number}++;
+    } else {
+        $times_issued{$item_number} = 1;
+    }
+
     my $loan_date = $row->{'Loan date'};
     my $due_date = $row->{'Due date'};
     my $returned_date = $row->{'Returned'};
@@ -141,7 +154,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
 
     # If renewed, calculate the last renewal date
     if ($num_renewals > 0 && $due_date =~ /(\d\d\d\d)-(\d\d)-(\d\d)/) {
-        my $last_renewal_datetime = DateTime->new( 
+        my $last_renewal_datetime = DateTime->new(
             year   => $1,
             month  => $2,
             day    => $3,
@@ -160,19 +173,6 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         undef $num_renewals;
     }
 
-    # Get the number of issues for item
-    #my $item_issues_sth = $dbh->prepare("SELECT issues FROM items WHERE itemnumber = ?");
-    #$item_issues_sth->execute($item_number);
-
-    #my $item = $item_issues_sth->fetchrow_hashref;
-    #my $num_issues = 1;
-    #if ($item) {
-        #my $db_num_issues = $item->{'issues'};
-        #if ($db_num_issues) {
-            #$num_issues = $db_num_issues + 1;
-        #}
-    #}
-
     # Add a time to each date
     $loan_date .= " 12:00:00";
     $due_date .= " 23:59:59";
@@ -188,10 +188,8 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
             'issuedate' => $loan_date,
         };
 
-        #my $onloan_date = substr($due_date, 0, 10);
-
-        #my $item_update_sth = $dbh->prepare("UPDATE items SET issues=?, onloan=?");
-        #$item_update_sth->execute($num_issues, $onloan_date);
+        my $onloan_date = substr($due_date, 0, 10);
+        $current_onloan_date{$item_number} = $onloan_date;
     } else {
         # Convert date to ISO format
         $returned_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
@@ -200,7 +198,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         $returned_date .= " 14:00:00";
 
         my $query = "
-            INSERT INTO old_issues 
+            INSERT INTO old_issues
             (issue_id, borrowernumber, itemnumber, date_due, branchcode, returndate, lastreneweddate, renewals, auto_renew, timestamp, issuedate, onsite_checkout)
             VALUES
             (?, ?, ?, ?, 'IELD', ?, ?, ?, 0, ?, ?, 0)";
@@ -216,15 +214,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
             $returned_date,
             $loan_date
         );
-
-        #my $item_update_sth = $dbh->prepare("UPDATE items SET issues=?");
-        #$item_update_sth->execute($num_issues);
     }
-
-    print("borrower: " . $row->{'Borr barcode'} .
-        " ($borrowernumber), item: " . $row->{Barcode} .
-        " ($item_number), Loan date: $loan_date, Due date: $due_date, " .
-        "Returned: $returned_date\n");
 }
 
 # Since the issue_id values get transferred from issues to old_issues, we
@@ -234,8 +224,7 @@ my $issues_auto_inc = $issue_id + 1;
 my $alter_sth = $dbh->prepare("ALTER TABLE issues AUTO_INCREMENT = ?");
 $alter_sth->execute($issues_auto_inc);
 
-# print Dumper(\@current_checkouts);
-
+print "Importing current checkouts...\n";
 for my $checkout (@current_checkouts) {
     my $query = "
         INSERT INTO issues
@@ -254,4 +243,16 @@ for my $checkout (@current_checkouts) {
     );
 }
 
+print "Updating items...\n";
+keys %times_issued;
+while(my($item_number, $num_issues) = each %times_issued) {
+    if (exists $current_onloan_date{$item_number}) {
+        my $item_update_sth = $dbh->prepare("UPDATE items SET issues = ?, onloan = ? WHERE itemnumber = ?");
+        $item_update_sth->execute($num_issues, $current_onloan_date{$item_number}, $item_number);
+    } else {
+        my $item_update_sth = $dbh->prepare("UPDATE items SET issues = ? WHERE itemnumber = ?");
+        $item_update_sth->execute($num_issues, $item_number);
+    }
+}
 
+print "Import done.\n";
