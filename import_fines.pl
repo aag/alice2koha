@@ -3,6 +3,10 @@
 # This script takes a "Fine Statistics" report from Alice 6.0 and imports it
 # into the accountlines table in a Koha database to record the current fines.
 #
+# The report can be exported by opening Alice, going to “Alice 6.00” ->
+# “Circulation” -> “Reports” -> “Fine statistics”, then choosing
+# “01 Fine Statistics” from the dropdown.
+#
 # A preprocessing step is needed before running this script:
 # you must convert the exported .dat file from UTF-16 to UTF-8.
 # $ iconv -f UTF-16LE -t UTF-8 -o fines.txt FSTATR00.txt
@@ -105,7 +109,7 @@ while (my $line = <$in_fh>) {
         if ($borrowernumber == 0) {
             next;
         }
-        
+
         # Convert date to ISO format
         $fine_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
 
@@ -122,4 +126,3 @@ while (my $line = <$in_fh>) {
 }
 
 close($in_fh);
-
