@@ -12,6 +12,17 @@
 # 2. Open the file in MarcEdit and remove the first entry, which just contains
 #    the name of the library.
 #
+# The IELD stored accession numbers in the "topics" field of each item. To
+# import this data as well, you will first need to export the topics from Alice.
+# You can do this by going to "Alice 6.00" -> "Management" -> "Catalogs" ->
+# "Topic" and choosing "03 Detailed - no notes" from the dropdown. Then you will
+# need to convert the exported file to UTF-8 and convert the line endings.
+# $ uconv --remove-signature -f UTF-16LE -t UTF-8 -o topics.txt TOPICC00.txt
+# $ dos2unix topics.txt
+#
+# Once converted, place the topics.txt file in the same directory as this
+# script.
+#
 # Make sure to configure the BRANCH and %types values below.
 # - This script (and Alice itself?) only supports items that are located in a
 #   single branch, which is specified in the BRANCH constant. This branch has
@@ -32,6 +43,7 @@
 use strict;
 use warnings;
 
+use Cwd 'abs_path';
 use MARC::Batch;
 
 use lib '.';
@@ -110,7 +122,42 @@ if ($num_args != 2) {
 my $input_path = $ARGV[0];
 my $output_path = $ARGV[1];
 
+sub get_topics {
+    my ($script_path) = abs_path($0) =~ m/(.*)convert_marc.pl/i;
+    my $topics_path = $script_path . 'topics.txt';
+
+    my %topics;
+    if (-e $topics_path) {
+        print("Loading accession numbers from topics.txt\n");
+        open(my $in_fh, $topics_path) or die "Could not open $topics_path: $!";
+
+        # In the file, there is an accession number by itself on one line and
+        # the book with that accession number on the next line.
+        my $acc_num;
+        while (my $line = <$in_fh>) {
+            chomp $line;
+
+            if ($line =~ /         (R\d+)      / && defined $acc_num) {
+                my $barcode = add_check_digit($1);
+                $topics{$barcode} = $acc_num;
+                #print("Barcode found: $barcode: $acc_num\n");
+            } elsif (index($line, "        ") == -1 && $line =~ /^[\d\w]+/) {
+                # If there is no large group of spaces in the line and it
+                # contains at least one character, it must be an accession number.
+                $acc_num = $line;
+                #print "Accession number found: $acc_num\n";
+            }
+        }
+    } else {
+        print("Topics file not found. Accession numbers will not be imported.\n");
+    }
+
+    return %topics;
+}
+
 my $batch = MARC::Batch->new('USMARC', $input_path);
+
+my %topics = get_topics();
 
 open(my $out_fh, "> $output_path") or die $!;
 while (my $record = $batch->next()) {
@@ -174,6 +221,17 @@ while (my $record = $batch->next()) {
 
     if ($barcode) {
         $koha_holdings_field->add_subfields('p', $barcode);
+
+        if (exists $topics{$barcode}) {
+            #print "Barcode $barcode found in topics\n";
+            my $acquisition_source_field = MARC::Field->new(
+                541, '', '',
+                'e' => $topics{$barcode}
+            );
+            $record->append_fields($acquisition_source_field);
+        } else {
+            #print "Barcode $barcode not found in topics\n";
+        }
     }
 
     if ($collection_code) {
@@ -204,4 +262,3 @@ while (my $record = $batch->next()) {
 }
 
 close($out_fh);
-
