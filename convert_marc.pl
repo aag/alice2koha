@@ -175,6 +175,7 @@ while (my $record = $batch->next()) {
     my $barcode;
     my $item_type;
     my $collection_code;
+    my $call_number;
 
     # Item type (e.g. Text, DVD, CD)
     if ($record->field('245') && $record->field('245')->subfield('h')) {
@@ -252,7 +253,23 @@ while (my $record = $batch->next()) {
 
     if ($ddc_num) {
         $record->field('082')->update('a', $ddc_num);
-        $koha_holdings_field->add_subfields('o', $ddc_num);
+    }
+
+    # Call number
+    if ($record->field('082')) {
+        my $ddc_field = $record->field('082');
+        if ($ddc_field->subfield('a') && $ddc_field->subfield('b')) {
+            $call_number = $ddc_field->subfield('a') . " " .
+                $ddc_field->subfield('b');
+        } elsif ($ddc_field->subfield('b')) {
+            $call_number = $ddc_field->subfield('b');
+        } elsif ($ddc_field->subfield('a')) {
+            $call_number = $ddc_field->subfield('a');
+        }
+    }
+
+    if ($call_number) {
+        $koha_holdings_field->add_subfields('o', $call_number);
     }
 
     $record->append_fields($koha_entries_field);
