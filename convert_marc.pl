@@ -181,6 +181,7 @@ while (my $record = $batch->next()) {
     if ($record->field('245') && $record->field('245')->subfield('h')) {
         my $alice_type = $record->field('245')->subfield('h');
         $item_type = $types{$alice_type};
+        $record->field('245')->delete_subfield(code => 'h');
     }
 
     # Cataloging source
