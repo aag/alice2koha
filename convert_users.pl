@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# This script takes the "Borrowers Detail Export" in the
+# This script takes the "Borrower Details Export" in the
 # "Text file - Unicode (.txt)" format from Alice 6.0 and
 # converts it to a patrons import file for Koha 3.22.
 #
@@ -116,7 +116,7 @@ sub parse_address {
             $out_street_name = $1;
             $out_street_num = $2;
             $out_street_num =~ s/,$//;
-        } 
+        }
 
         my $postcode_city = $addr_1;
         if ($postcode_city eq "") {
@@ -131,7 +131,7 @@ sub parse_address {
             $out_city = $postcode_city;
         } elsif ($postcode_city =~ /^\w+$/) {
             $out_city = $postcode_city;
-        } 
+        }
     } elsif ($street_num eq "c/o" && $street_name ne "" &&
         $addr_1 ne "" && $addr_2 =~ /\d\d\d\d\d \w+$/) {
         # There's a "care of" line
@@ -357,7 +357,7 @@ $out_csv->print($out_fh, \@header_row);
 my $member_count = 0;
 while (my $row = $in_csv->getline_hr($in_fh)) {
     $row->{Barcode} =~ m/^B/ or next; # Exclude old-style borrower IDs
-    
+
     # Uncomment this line to exclude expired memberships
     #$row->{"Membership expiry date"} =~ m/2016|2017|2018|2019|2020/ or next;
 
@@ -462,7 +462,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
             $country2 = $countries{$country2};
         }
     }
-    
+
     my $patron_attributes = "";
     if ($country ne "") {
         $patron_attributes = "\"COUNTRY:$country\"";
@@ -585,7 +585,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
         "", # contactnote
         "", # sort1
         "", # sort2
-        "", # altcontactfirstname 
+        "", # altcontactfirstname
         "", # altcontactsurname
         "", # altcontactaddress1
         "", # altcontactaddress2
@@ -607,4 +607,3 @@ close($in_fh) or die "$output_path: $!";
 close($out_fh) or die "$output_path: $!";
 
 print("Member count: $member_count\n");
-
