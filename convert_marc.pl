@@ -7,7 +7,7 @@
 # Two preprocessing steps on the input file is needed before running this
 # script:
 # 1. Convert the exported .dat file from UTF-16 to UTF-8.
-#    $ iconv -f UTF-16LE -t UTF-8 -o alice_export.mrc MARCXB01.dat
+#    $ iconv -f UTF-16LE -t UTF-8 -o alice_export.mrc MARCXB00.dat
 #
 # 2. Open the file in MarcEdit and remove the first entry, which just contains
 #    the name of the library.

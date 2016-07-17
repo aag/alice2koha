@@ -6,7 +6,7 @@
 #
 # A preprocessing step is needed before running this script:
 # you must convert the exported .dat file from UTF-16 to UTF-8.
-# $ iconv -f UTF-16LE -t UTF-8 -o BORRWB00.tsv BORRWB00.dat
+# $ iconv -f UTF-16LE -t UTF-8 -o borrowers.tsv BORRWB00.dat
 #
 # Additionally, you must set up the Patron categories in the
 # Koha administration interface, which can be reached under

@@ -31,7 +31,7 @@ use Util::Barcode qw(add_check_digit);
 
 my $num_args = @ARGV;
 if ($num_args != 1) {
-    print "Usage: import_fines.pl <INPUT>\n";
+    print "Usage: import_checkouts.pl <INPUT>\n";
     exit;
 }
 
