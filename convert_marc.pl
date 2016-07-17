@@ -109,6 +109,35 @@ my %ccodes = (
     'Travel' => 'Travel',
 );
 
+my %ccodes_nonfic_numbers = (
+    'General works' => '0',
+    'Philosophy' => '1',
+    'Religion' => '2',
+    'Social Sciences' => '3',
+    'Language' => '4',
+    'Pure Sciences' => '5',
+    'Applied Sciences' => '6',
+    'Arts & Recreations' => '7',
+    'Literature' => '8',
+    'History' => '9',
+);
+
+my %ccodes_abbrev = (
+    'Biography' => 'B ',
+    'Biography Collection' => 'BC ',
+    'Detective Stories' => 'X ',
+    'Easy Readers' => 'ER ',
+    'Graphic Books' => 'G ',
+    'Juvenile Fiction' => 'JF ',
+    'Juvenile Non-Fiction' => 'J',
+    'Reference' => 'R ',
+    'Science Fiction' => 'SF ',
+    'Short Stories' => 'SS ',
+    'Short-Story Coll.' => 'SSC ',
+    'TESL' => 'TESL ',
+    'Travel' => 'T',
+);
+
 # ======================================
 # = No customization needed below here =
 # ======================================
@@ -214,10 +243,10 @@ while (my $record = $batch->next()) {
     # Add the first number to the Dewey Decimal Classification Number
     my $ddc_num;
     if ($record->field('082') && $record->field('082')->subfield('a') &&
-        $collection_code && $collection_code =~ /^\d/
+        $collection_code && $ccodes_nonfic_numbers{$collection_code}
     ) {
         my $short_ddc = $record->field('082')->subfield('a');
-        my $first_digit = substr($collection_code, 0, 1);
+        my $first_digit = $ccodes_nonfic_numbers{$collection_code};
         $ddc_num = "$first_digit$short_ddc";
     }
 
@@ -267,6 +296,10 @@ while (my $record = $batch->next()) {
         } elsif ($ddc_field->subfield('a')) {
             $call_number = $ddc_field->subfield('a');
         }
+    }
+
+    if ($call_number && $collection_code && $ccodes_abbrev{$collection_code}) {
+        $call_number = $ccodes_abbrev{$collection_code} . $call_number;
     }
 
     if ($call_number) {
