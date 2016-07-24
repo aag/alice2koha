@@ -56,6 +56,9 @@ my $infile_path = $ARGV[0];
 open(my $in_fh, $infile_path) or die "Could not open $infile_path: $!";
 my $dbh = C4::Context->dbh;
 
+my $num_overdue = 0;
+my $num_membership = 0;
+
 while (my $line = <$in_fh>) {
     chomp $line;
 
@@ -66,6 +69,7 @@ while (my $line = <$in_fh>) {
 
     if ($line =~ /^(B\d+).*    (R\d+)      .*0\.00       (\d+\.\d+)\s+(\d\d\/\d\d\/\d\d\d\d)/) {
         # This is an overdue fine
+        $num_overdue++;
         my $patron_barcode = add_check_digit($1);
         my $biblio_barcode = add_check_digit($2);
         my $fine_amount = $3;
@@ -88,7 +92,7 @@ while (my $line = <$in_fh>) {
             my $description = "overdue book $item_number";
 
             #print("itemnumber: $item_number barcode: " . $item->{'barcode'} . " borrowernumber: $borrowernumber barcode: $patron_barcode\n");
-            print("Overdue charge: $patron_barcode\t$biblio_barcode\t$fine_amount\t$fine_date\n");
+            #print("Overdue charge: $patron_barcode\t$biblio_barcode\t$fine_amount\t$fine_date\n");
 
             my $query = "
                 INSERT INTO accountlines
@@ -101,6 +105,7 @@ while (my $line = <$in_fh>) {
 
     } elsif ($line =~ /^(B\d+)    .*0\.00       (\d+\.\d+)\s+(\d\d\/\d\d\/\d\d\d\d)/) {
         # This is a membership fee
+        $num_membership++;
         my $patron_barcode = add_check_digit($1);
         my $fine_amount = $2;
         my $fine_date = $3;
@@ -113,7 +118,7 @@ while (my $line = <$in_fh>) {
         # Convert date to ISO format
         $fine_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
 
-        print "Membership charge: $patron_barcode\t$fine_amount\t$fine_date\n";
+        #print "Membership charge: $patron_barcode\t$fine_amount\t$fine_date\n";
 
         my $query = "
                 INSERT INTO accountlines
@@ -126,3 +131,6 @@ while (my $line = <$in_fh>) {
 }
 
 close($in_fh);
+
+print "Overdue fines: $num_overdue\n";
+print "Membership fees: $num_membership\n";
