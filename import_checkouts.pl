@@ -86,8 +86,10 @@ my $infile_path = $ARGV[0];
 
 my $in_csv = Text::CSV->new({
     binary => 1,
-    quote_char => '"',
-    escape_char => "\\",
+    quote_char => undef,
+    escape_char => undef,
+    quote_space => 0,
+    quote_null => 0,
     sep_char => "\t",
     allow_loose_quotes => 1,
     allow_loose_escapes => 1,
@@ -121,10 +123,22 @@ my %current_onloan_date;
 
 print "Importing old checkouts...\n";
 
+my $last_barcode = "";
+
 while (my $row = $in_csv->getline_hr($in_fh)) {
     $issue_id++;
     my $patron_barcode = add_check_digit($row->{'Borr barcode'});
     my $item_barcode = add_check_digit($row->{Barcode});
+
+    #if ($patron_barcode =~ "^B00630.*") {
+    # if ($patron_barcode ne $last_barcode) {
+    #     $last_barcode = $patron_barcode;
+    #     my $patron_name = $row->{'Borr name'};
+    #
+    #     print "$patron_barcode : $patron_name : $item_barcode\n";
+    # }
+    #
+    # next;
 
     my $borrowernumber = get_borrowernumber($dbh, $patron_barcode);
     if ($borrowernumber == 0) {

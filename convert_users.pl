@@ -333,8 +333,10 @@ my %countries = (
 
 my $in_csv = Text::CSV->new({
     binary => 1,
-    quote_char => '"',
-    escape_char => "\\",
+    quote_char => undef,
+    escape_char => undef,
+    quote_space => 0,
+    quote_null => 0,
     sep_char => "\t",
     allow_loose_quotes => 1,
     allow_loose_escapes => 1,
