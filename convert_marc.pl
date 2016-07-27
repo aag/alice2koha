@@ -77,7 +77,7 @@ my %material_types = (
     'OTHER' => 'p',
     'PICTURE' => 'k',
     'SOUND' => 'i',
-    'TEXT' => 'a',
+    'BOOK' => 'a',
     'VIDEO' => 'g',
 );
 
@@ -232,7 +232,7 @@ while (my $record = $batch->next()) {
         if ($field_852->subfield('k')) {
             my $alice_collection_code = $field_852->subfield('k');
             if (!$ccodes{$alice_collection_code}) {
-                print $alice_collection_code . "\n";
+                #print $alice_collection_code . "\n";
                 $collection_code = $alice_collection_code;
             } else {
                 $collection_code = $ccodes{$alice_collection_code};
@@ -263,6 +263,12 @@ while (my $record = $batch->next()) {
         } else {
             #print "Barcode $barcode not found in topics\n";
         }
+    }
+
+    # DVDs have the collection code of Fiction in Alice, but we want them to
+    # be in their own collection.
+    if ($collection_code && $collection_code eq "Fiction" && $item_type eq "DVD") {
+        $collection_code = "Video";
     }
 
     if ($collection_code) {
