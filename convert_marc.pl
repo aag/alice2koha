@@ -64,7 +64,7 @@ my %types = (
     '[Other]' => 'OTHER',
     '[Picture]' => 'PICTURE',
     '[Sound Recording]' => 'SOUND',
-    '[Text]' => 'TEXT',
+    '[Text]' => 'BOOK',
     '[Video recording]' => 'VIDEO',
 );
 
