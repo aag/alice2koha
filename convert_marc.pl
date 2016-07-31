@@ -57,7 +57,7 @@ use constant CLASSIFICATION => "ddc";
 
 my %types = (
     '[Audio Cassette]' => 'CASSETTE',
-    '[Compact Disc]' => 'CD',
+    '[Compact Disc]' => 'AUDIOBOOK',
     '[DVD]' => 'DVD',
     '[Flash card]' => 'FLASHCARD',
     '[Game]' => 'GAME',
@@ -70,7 +70,7 @@ my %types = (
 
 my %material_types = (
     'CASSETTE' => 'i',
-    'CD' => 'i',
+    'AUDIOBOOK' => 'i',
     'DVD' => 'g',
     'FLASHCARD' => 'a',
     'GAME' => 'r',
