@@ -38,7 +38,7 @@ while (my $line = <$in_fh>) {
         my $day = $2;
         my $month = $3;
         my $year = $4;
-        my $name_length = 2 + (length $name);
+        my $name_length = (length "$authority_count") + (length $name) + 1;
         my $year_short = substr $year, 2, 2;
 
         my $marc_record = MARC::Record->new();
@@ -85,3 +85,5 @@ while (my $line = <$in_fh>) {
 
 close($in_fh);
 close($out_fh);
+
+print "$authority_count authors found.\n";

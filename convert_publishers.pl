@@ -39,11 +39,8 @@ while (my $line = <$in_fh>) {
         my $day = $3;
         my $month = $4;
         my $year = $5;
-        my $name_length = 2 + (length $name);
+        my $name_length = (length "$authority_count") + (length $name) + 1;
         my $year_short = substr $year, 2, 2;
-
-        print "$name - $location\n";
-        next;
 
         my $marc_record = MARC::Record->new();
         $marc_record->leader("002${name_length}nz  a2200109n  4500");
@@ -72,7 +69,7 @@ while (my $line = <$in_fh>) {
 
         my $type_field = MARC::Field->new(
             '942', '', '',
-            'a' => "PERSO_NAME",
+            'a' => "CORPO_NAME",
         );
 
         $marc_record->append_fields($control_num_field);
@@ -80,7 +77,7 @@ while (my $line = <$in_fh>) {
         $marc_record->append_fields($last_transaction_field);
         $marc_record->append_fields($control_008_field);
         $marc_record->append_fields($cat_source_field);
-        $marc_record->append_fields($personal_name_field);
+        $marc_record->append_fields($corporate_name_field);
         $marc_record->append_fields($type_field);
 
         print $out_fh $marc_record->as_usmarc();
@@ -89,3 +86,5 @@ while (my $line = <$in_fh>) {
 
 close($in_fh);
 close($out_fh);
+
+print "$authority_count publishers found.\n";
