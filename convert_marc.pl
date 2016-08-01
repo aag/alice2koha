@@ -187,9 +187,41 @@ sub get_topics {
 my $batch = MARC::Batch->new('USMARC', $input_path);
 
 my %topics = get_topics();
+my %records;
+my @records_no_isbn;
+my $num_duplicate_copies = 0;
+my $num_input_records = 0;
+my $num_books_no_isbn = 0;
 
-open(my $out_fh, "> $output_path") or die $!;
+# Disable output buffering for STDOUT
+{
+    my $stdofh = select STDOUT;
+    $| = 1;
+    select $stdofh;
+}
+
+print "Parsing input file...";
+
 while (my $record = $batch->next()) {
+    my $is_duplicate_copy = 0;
+    $num_input_records++;
+
+    my $output_record = $record;
+    my $isbn;
+    if ($record->field('020') && $record->field('020')->subfield('a')) {
+        $isbn = $record->field('020')->subfield('a');
+        if (exists $records{$isbn}) {
+            $num_duplicate_copies++;
+            $is_duplicate_copy = 1;
+            $output_record = $records{$isbn};
+        } else {
+            $records{$isbn} = $record;
+        }
+    } else {
+        # No ISBN
+        push @records_no_isbn, $record;
+    }
+
     my $koha_holdings_field = MARC::Field->new(
         952, '', '',
         'a' => BRANCH, # Home branch AKA owning library
@@ -214,7 +246,7 @@ while (my $record = $batch->next()) {
     }
 
     # Cataloging source
-    if ($record->field('040')) {
+    if ($record->field('040') && !$is_duplicate_copy) {
         # Add transcribing agency
         $record->field('040')->add_subfields('c', BRANCH);
     }
@@ -253,7 +285,7 @@ while (my $record = $batch->next()) {
     if ($barcode) {
         $koha_holdings_field->add_subfields('p', $barcode);
 
-        if (exists $topics{$barcode}) {
+        if (exists $topics{$barcode} && !$is_duplicate_copy) {
             #print "Barcode $barcode found in topics\n";
             my $acquisition_source_field = MARC::Field->new(
                 541, '', '',
@@ -285,6 +317,10 @@ while (my $record = $batch->next()) {
         my $leader = $record->leader();
         $leader =~ s/nam/$leader_substring/g;
         $record->leader($leader);
+
+        if ($item_type eq "BOOK" && !$isbn) {
+            $num_books_no_isbn++;
+        }
     }
 
     if ($ddc_num) {
@@ -312,10 +348,35 @@ while (my $record = $batch->next()) {
         $koha_holdings_field->add_subfields('o', $call_number);
     }
 
-    $record->append_fields($koha_entries_field);
-    $record->append_fields($koha_holdings_field);
+    if (!$is_duplicate_copy) {
+        $record->append_fields($koha_entries_field);
+    }
 
+    $output_record->append_fields($koha_holdings_field);
+}
+
+print " done.\n";
+print "Writing output file...";
+
+my $output_records = 0;
+open(my $out_fh, "> $output_path") or die $!;
+
+# Output the records with no ISBN
+foreach my $record (@records_no_isbn) {
+    $output_records++;
+    print $out_fh $record->as_usmarc();
+}
+
+# Output the records with an ISBN
+for my $record (values %records) {
+    $output_records++;
     print $out_fh $record->as_usmarc();
 }
 
 close($out_fh);
+print " done.\n\n";
+
+print "Total input records: $num_input_records\n";
+print "Total records written: $output_records (plus $num_duplicate_copies duplicate copies)\n";
+
+print "Books without ISBNs: $num_books_no_isbn\n";
