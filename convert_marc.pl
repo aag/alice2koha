@@ -258,6 +258,9 @@ while (my $record = $batch->next()) {
         if ($field_852->subfield('p')) {
             $barcode = $field_852->subfield('p');
             $barcode = add_check_digit($barcode);
+
+            # The barcode only belongs in the item, not the biblio record.
+            $field_852->delete_subfield(code => 'p');
         }
 
         # Collection code (e.g. Fiction, Biography)
@@ -269,6 +272,23 @@ while (my $record = $batch->next()) {
             } else {
                 $collection_code = $ccodes{$alice_collection_code};
             }
+        }
+    }
+
+    # 600 is a repeating field
+    # Alice writes the subject to the "Personal Name" subject field, but in
+    # our collection they are usually "Topical Term" subjects, so move them
+    # there.
+    my @fields_600 = $record->field('600');
+    foreach my $field_600 (@fields_600) {
+        if ($field_600->subfield('a')) {
+            my $subject_field = MARC::Field->new(
+                650, '', '',
+                'a' => $field_600->subfield('a'), # Topical term or geographic name entry element
+            );
+
+            $record->append_fields($subject_field);
+            $record->delete_field($field_600);
         }
     }
 
@@ -285,13 +305,9 @@ while (my $record = $batch->next()) {
     if ($barcode) {
         $koha_holdings_field->add_subfields('p', $barcode);
 
-        if (exists $topics{$barcode} && !$is_duplicate_copy) {
+        if (exists $topics{$barcode}) {
             #print "Barcode $barcode found in topics\n";
-            my $acquisition_source_field = MARC::Field->new(
-                541, '', '',
-                'e' => $topics{$barcode}
-            );
-            $record->append_fields($acquisition_source_field);
+            $koha_holdings_field->add_subfields('i', $topics{$barcode});
         } else {
             #print "Barcode $barcode not found in topics\n";
         }
