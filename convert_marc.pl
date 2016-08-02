@@ -226,6 +226,7 @@ while (my $record = $batch->next()) {
         952, '', '',
         'a' => BRANCH, # Home branch AKA owning library
         'b' => BRANCH, # Holding branch
+        2 => CLASSIFICATION, # Source of classification or shelving scheme
     );
 
     my $koha_entries_field = MARC::Field->new(
