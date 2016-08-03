@@ -235,11 +235,26 @@ while (my $record = $batch->next()) {
     my $collection_code;
     my $call_number;
 
-    # Item type (e.g. Text, DVD, CD)
-    if ($record->field('245') && $record->field('245')->subfield('h')) {
-        my $alice_type = $record->field('245')->subfield('h');
-        $item_type = $types{$alice_type};
-        $record->field('245')->delete_subfield(code => 'h');
+
+    if ($record->field('245')) {
+        # Item type (e.g. Text, DVD, CD)
+        if ($record->field('245')->subfield('h')) {
+            my $alice_type = $record->field('245')->subfield('h');
+            $item_type = $types{$alice_type};
+            $record->field('245')->delete_subfield(code => 'h');
+        }
+
+        # Set location of DVDs where the title ends in "(Upstairs)"
+        if ($record->field('245')->subfield('a')) {
+            my $title = $record->field('245')->subfield('a');
+            if ($item_type eq "DVD" && $title =~ /(.*) \(upstairs\)$/i) {
+                my $real_title = $1;
+                $record->field('245')->update('a' => $real_title);
+
+                # Set the location to the "Upstairs" authorised value
+                $koha_holdings_field->add_subfields('c', 3);
+            }
+        }
     }
 
     # Cataloging source
