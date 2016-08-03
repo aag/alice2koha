@@ -61,11 +61,7 @@ my %types = (
     '[DVD]' => 'DVD',
     '[Flash card]' => 'FLASHCARD',
     '[Game]' => 'GAME',
-    '[Other]' => 'OTHER',
-    '[Picture]' => 'PICTURE',
-    '[Sound Recording]' => 'SOUND',
     '[Text]' => 'BOOK',
-    '[Video recording]' => 'VIDEO',
 );
 
 my %material_types = (
