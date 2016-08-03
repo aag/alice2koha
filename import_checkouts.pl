@@ -116,6 +116,15 @@ if ($old_issue) {
 # go through the file.
 my @current_checkouts;
 
+# Collect "special account" items so we can set the DAMAGED and MISSING
+# status in the item information.
+my @replacements;
+my @repairs;
+my @missing_books;
+use constant REPLACE_USER_BARCODE => "B01276P4025";
+use constant REPAIR_USER_BARCODE => "B00900Y4025";
+use constant MISSING_USER_BARCODE => "B02185P4025";
+
 # Collect the total number of times each item has been checked out and,
 # if currently checked out, the due date.
 my %times_issued;
@@ -130,16 +139,6 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     my $patron_barcode = add_check_digit($row->{'Borr barcode'});
     my $item_barcode = add_check_digit($row->{Barcode});
 
-    #if ($patron_barcode =~ "^B00630.*") {
-    # if ($patron_barcode ne $last_barcode) {
-    #     $last_barcode = $patron_barcode;
-    #     my $patron_name = $row->{'Borr name'};
-    #
-    #     print "$patron_barcode : $patron_name : $item_barcode\n";
-    # }
-    #
-    # next;
-
     my $borrowernumber = get_borrowernumber($dbh, $patron_barcode);
     if ($borrowernumber == 0) {
         next;
@@ -148,12 +147,6 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     my $item_number = get_itemnumber($dbh, $item_barcode);
     if ($item_number == 0) {
         next;
-    }
-
-    if (exists $times_issued{$item_number}) {
-        $times_issued{$item_number}++;
-    } else {
-        $times_issued{$item_number} = 1;
     }
 
     my $loan_date = $row->{'Loan date'};
@@ -193,6 +186,17 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
 
     if ($returned_date eq "  /  /    ") {
         # This item has not yet been returned
+        if ($patron_barcode eq REPAIR_USER_BARCODE) {
+            push @repairs, $item_number;
+            next;
+        } elsif ($patron_barcode eq REPLACE_USER_BARCODE) {
+            push @replacements, $item_number;
+            next;
+        } elsif ($patron_barcode eq MISSING_USER_BARCODE) {
+            push @missing_books, $item_number;
+            next;
+        }
+
         push @current_checkouts, {
             'borrowernumber' => $borrowernumber,
             'itemnumber' => $item_number,
@@ -228,6 +232,13 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
             $returned_date,
             $loan_date
         );
+    }
+
+    # Do this at the end in case the item was checked out to a "special" patron
+    if (exists $times_issued{$item_number}) {
+        $times_issued{$item_number}++;
+    } else {
+        $times_issued{$item_number} = 1;
     }
 }
 
@@ -267,6 +278,22 @@ while(my($item_number, $num_issues) = each %times_issued) {
         my $item_update_sth = $dbh->prepare("UPDATE items SET issues = ? WHERE itemnumber = ?");
         $item_update_sth->execute($num_issues, $item_number);
     }
+}
+
+print "Setting item states...\n";
+foreach my $item_number (@replacements) {
+    my $item_update_sth = $dbh->prepare("UPDATE items SET damaged = ? WHERE itemnumber = ?");
+    $item_update_sth->execute(2, $item_number);
+}
+
+foreach my $item_number (@repairs) {
+    my $item_update_sth = $dbh->prepare("UPDATE items SET damaged = ? WHERE itemnumber = ?");
+    $item_update_sth->execute(1, $item_number);
+}
+
+foreach my $item_number (@missing_books) {
+    my $item_update_sth = $dbh->prepare("UPDATE items SET itemlost = ? WHERE itemnumber = ?");
+    $item_update_sth->execute(2, $item_number);
 }
 
 print "Import done.\n";
