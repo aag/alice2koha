@@ -66,6 +66,7 @@ my %types = (
 
 my %material_types = (
     'CASSETTE' => 'i',
+    'COURSEBOOK' => 'a',
     'AUDIOBOOK' => 'i',
     'DVD' => 'g',
     'TEACHING' => 'r',
@@ -282,7 +283,7 @@ while (my $record = $batch->next()) {
         if ($field_852->subfield('k')) {
             my $alice_collection_code = $field_852->subfield('k');
             if (!$ccodes{$alice_collection_code}) {
-                #print $alice_collection_code . "\n";
+                print "WARNING: Collection Code not found: " . $alice_collection_code . "\n";
                 $collection_code = $alice_collection_code;
             } else {
                 $collection_code = $ccodes{$alice_collection_code};
@@ -336,6 +337,12 @@ while (my $record = $batch->next()) {
 
     if ($collection_code) {
         $koha_holdings_field->add_subfields('8', $collection_code);
+
+        if ($item_type && $collection_code eq "Course Book") {
+            # Course books have their own circulation rules, so they must
+            # have a separate item type.
+            $item_type = "COURSEBOOK";
+        }
     }
 
     if ($item_type) {
