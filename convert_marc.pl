@@ -202,16 +202,25 @@ while (my $record = $batch->next()) {
     my $is_duplicate_copy = 0;
     $num_input_records++;
 
+    my $title;
+    if ($record->field('245') && $record->field('245')->subfield('a')) {
+        $title = $record->field('245')->subfield('a');
+    }
+
     my $output_record = $record;
     my $isbn;
-    if ($record->field('020') && $record->field('020')->subfield('a')) {
+    if ($record->field('020') && $record->field('020')->subfield('a') && $title) {
         $isbn = $record->field('020')->subfield('a');
-        if (exists $records{$isbn}) {
+        # Due to improperly entered data, we have different books with the
+        # same ISBN, so we also have to match on the title.
+        my $dup_key = $isbn . "|" . $title;
+
+        if (exists $records{$dup_key}) {
             $num_duplicate_copies++;
             $is_duplicate_copy = 1;
-            $output_record = $records{$isbn};
+            $output_record = $records{$dup_key};
         } else {
-            $records{$isbn} = $record;
+            $records{$dup_key} = $record;
         }
     } else {
         # No ISBN
@@ -245,15 +254,14 @@ while (my $record = $batch->next()) {
         }
 
         # Set location of DVDs where the title ends in "(Upstairs)"
-        if ($record->field('245')->subfield('a')) {
-            my $title = $record->field('245')->subfield('a');
-            if ($item_type eq "DVD" && $title =~ /(.*) \(upstairs\)$/i) {
-                my $real_title = $1;
-                $record->field('245')->update('a' => $real_title);
+        if ($title &&
+            $item_type eq "DVD" && $title =~ /(.*) \(upstairs\)$/i
+        ) {
+            my $real_title = $1;
+            $record->field('245')->update('a' => $real_title);
 
-                # Set the location to the "Upstairs" authorised value
-                $koha_holdings_field->add_subfields('c', 3);
-            }
+            # Set the location to the "Upstairs" authorised value
+            $koha_holdings_field->add_subfields('c', 3);
         }
     }
 
