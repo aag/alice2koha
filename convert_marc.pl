@@ -59,8 +59,8 @@ my %types = (
     '[Audio Cassette]' => 'CASSETTE',
     '[Compact Disc]' => 'AUDIOBOOK',
     '[DVD]' => 'DVD',
-    '[Flash card]' => 'FLASHCARD',
-    '[Game]' => 'GAME',
+    '[Flash card]' => 'TEACHING',
+    '[Game]' => 'TEACHING',
     '[Text]' => 'BOOK',
 );
 
@@ -68,13 +68,8 @@ my %material_types = (
     'CASSETTE' => 'i',
     'AUDIOBOOK' => 'i',
     'DVD' => 'g',
-    'FLASHCARD' => 'a',
-    'GAME' => 'r',
-    'OTHER' => 'p',
-    'PICTURE' => 'k',
-    'SOUND' => 'i',
+    'TEACHING' => 'r',
     'BOOK' => 'a',
-    'VIDEO' => 'g',
 );
 
 my %ccodes = (
