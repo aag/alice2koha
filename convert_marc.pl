@@ -55,6 +55,16 @@ use constant BRANCH => "IELD";
 # ddc is Dewey Decimal Classification
 use constant CLASSIFICATION => "ddc";
 
+use constant LOC_CHILDREN => 1;
+use constant LOC_FIC_TRAVEL => 2;
+use constant LOC_NEW_BOOKS => 3;
+use constant LOC_NEW_DVDS => 4;
+use constant LOC_NON_FICTION_EAST => 5;
+use constant LOC_NON_FICTION_WEST => 6;
+use constant LOC_REFERENCE => 7;
+use constant LOC_UPSTAIRS => 8;
+use constant LOC_VIDEO_AUDIOBOOKS => 9;
+
 my %types = (
     '[Audio Cassette]' => 'CASSETTE',
     '[Compact Disc]' => 'AUDIOBOOK',
@@ -128,6 +138,39 @@ my %ccodes_abbrev = (
     'Short-Story Coll.' => 'SSC ',
     'TESL' => 'TESL ',
     'Travel' => 'T',
+);
+
+my %ccodes_locations = (
+    'General Works' => LOC_NON_FICTION_WEST,
+    'Philosophy' => LOC_NON_FICTION_WEST,
+    'Religion' => LOC_NON_FICTION_WEST,
+    'Social Sciences' => LOC_NON_FICTION_WEST,
+    'Language' => LOC_NON_FICTION_WEST,
+    'Pure Sciences' => LOC_NON_FICTION_WEST,
+    'Applied Sciences' => LOC_NON_FICTION_WEST,
+    'Arts & Recreations' => LOC_NON_FICTION_WEST,
+    'Literature' => LOC_NON_FICTION_EAST,
+    'History' => LOC_NON_FICTION_EAST,
+    'Biography' => LOC_NON_FICTION_WEST,
+    'Biography Collection' => LOC_NON_FICTION_WEST,
+    'Course Book' => LOC_NON_FICTION_EAST,
+    'Detective Stories' => LOC_FIC_TRAVEL,
+    'Easy Readers' => LOC_NON_FICTION_EAST,
+    'Fiction' => LOC_FIC_TRAVEL,
+    'Graphic Books' => LOC_FIC_TRAVEL,
+    'Juvenile Fiction' => LOC_CHILDREN,
+    'Juvenile Non-Fiction' => LOC_CHILDREN,
+    'Reference' => LOC_REFERENCE,
+    'Science Fiction' => LOC_FIC_TRAVEL,
+    'Short Stories' => LOC_FIC_TRAVEL,
+    'Short-Story Collection' => LOC_FIC_TRAVEL,
+    'TESL' => LOC_NON_FICTION_EAST,
+    'Travel' => LOC_FIC_TRAVEL,
+);
+
+my %types_locations = (
+    'DVD' => LOC_VIDEO_AUDIOBOOKS,
+    'AUDIOBOOK' => LOC_VIDEO_AUDIOBOOKS,
 );
 
 # ======================================
@@ -240,24 +283,12 @@ while (my $record = $batch->next()) {
     my $collection_code;
     my $call_number;
 
-
     if ($record->field('245')) {
         # Item type (e.g. Text, DVD, CD)
         if ($record->field('245')->subfield('h')) {
             my $alice_type = $record->field('245')->subfield('h');
             $item_type = $types{$alice_type};
             $record->field('245')->delete_subfield(code => 'h');
-        }
-
-        # Set location of DVDs where the title ends in "(Upstairs)"
-        if ($title &&
-            $item_type eq "DVD" && $title =~ /(.*) \(upstairs\)$/i
-        ) {
-            my $real_title = $1;
-            $record->field('245')->update('a' => $real_title);
-
-            # Set the location to the "Upstairs" authorised value
-            $koha_holdings_field->add_subfields('c', 3);
         }
     }
 
@@ -375,6 +406,27 @@ while (my $record = $batch->next()) {
             $call_number = $ddc_field->subfield('b');
         } elsif ($ddc_field->subfield('a')) {
             $call_number = $ddc_field->subfield('a');
+        }
+    }
+
+    # Locations
+    if ($item_type && $collection_code) {
+        if ($title &&
+            $item_type eq "DVD" && $title =~ /(.*) \(upstairs\)$/i
+        ) {
+            # Set location of DVDs where the title ends in "(Upstairs)"
+            my $real_title = $1;
+            $record->field('245')->update('a' => $real_title);
+
+            $koha_holdings_field->add_subfields('c', LOC_VIDEO_AUDIOBOOKS);
+        } elsif ($item_type eq "AUDIOBOOK" && $collection_code =~ "Juvenile.*") {
+            $koha_holdings_field->add_subfields('c', LOC_CHILDREN);
+        } elsif (exists $types_locations{$item_type}) {
+            $koha_holdings_field->add_subfields('c', $types_locations{$item_type});
+        } elsif (exists $ccodes_locations{$collection_code}) {
+            $koha_holdings_field->add_subfields('c', $ccodes_locations{$collection_code});
+        } else {
+            print "No location for $isbn - $title\n";
         }
     }
 
