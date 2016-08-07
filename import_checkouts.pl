@@ -125,9 +125,10 @@ use constant REPLACE_USER_BARCODE => "B01276P4025";
 use constant REPAIR_USER_BARCODE => "B00900Y4025";
 use constant MISSING_USER_BARCODE => "B02185P4025";
 
-# Collect the total number of times each item has been checked out and,
-# if currently checked out, the due date.
+# Collect the total number of times each item has been checked out and, when
+# the item was last in the library, and if currently checked out, the due date.
 my %times_issued;
+my %datelastseen;
 my %current_onloan_date;
 
 print "Importing old checkouts...\n";
@@ -158,6 +159,10 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
     # Convert date to ISO format
     $loan_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
     $due_date =~ s/(\d\d)\/(\d\d)\/(\d\d\d\d)/$3-$2-$1/;
+
+    if (!exists $datelastseen{$item_number} || $loan_date gt $datelastseen{$item_number}) {
+        $datelastseen{$item_number} = $loan_date;
+    }
 
     # If renewed, calculate the last renewal date
     if ($num_renewals > 0 && $due_date =~ /(\d\d\d\d)-(\d\d)-(\d\d)/) {
@@ -272,11 +277,11 @@ print "Updating items...\n";
 keys %times_issued;
 while(my($item_number, $num_issues) = each %times_issued) {
     if (exists $current_onloan_date{$item_number}) {
-        my $item_update_sth = $dbh->prepare("UPDATE items SET issues = ?, onloan = ? WHERE itemnumber = ?");
-        $item_update_sth->execute($num_issues, $current_onloan_date{$item_number}, $item_number);
+        my $item_update_sth = $dbh->prepare("UPDATE items SET issues = ?, onloan = ?, datelastseen = ? WHERE itemnumber = ?");
+        $item_update_sth->execute($num_issues, $current_onloan_date{$item_number}, $datelastseen{$item_number}, $item_number);
     } else {
-        my $item_update_sth = $dbh->prepare("UPDATE items SET issues = ? WHERE itemnumber = ?");
-        $item_update_sth->execute($num_issues, $item_number);
+        my $item_update_sth = $dbh->prepare("UPDATE items SET issues = ?, datelastseen = ? WHERE itemnumber = ?");
+        $item_update_sth->execute($num_issues, $datelastseen{$item_number}, $item_number);
     }
 }
 
