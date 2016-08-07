@@ -419,7 +419,9 @@ while (my $record = $batch->next()) {
             $record->field('245')->update('a' => $real_title);
 
             $koha_holdings_field->add_subfields('c', LOC_VIDEO_AUDIOBOOKS);
-        } elsif ($item_type eq "AUDIOBOOK" && $collection_code =~ "Juvenile.*") {
+        } elsif (($item_type eq "AUDIOBOOK" || $item_type eq "DVD")
+            && $collection_code =~ "Juvenile.*"
+        ) {
             $koha_holdings_field->add_subfields('c', LOC_CHILDREN);
         } elsif (exists $types_locations{$item_type}) {
             $koha_holdings_field->add_subfields('c', $types_locations{$item_type});
