@@ -45,7 +45,7 @@ while (my $line = <$in_fh>) {
         $marc_record->leader("002${name_length}nz  a2200109n  4500");
 
         my $control_num_field = MARC::Field->new('001', $authority_count);
-        my $control_num_id_field = MARC::Field->new('003', 'OSt');
+        my $control_num_id_field = MARC::Field->new('003', 'IELD');
         my $last_transaction_field = MARC::Field->new(
             '005',
             "$year$month${day}120000.0"
@@ -58,7 +58,7 @@ while (my $line = <$in_fh>) {
 
         my $cat_source_field = MARC::Field->new(
             '040', '', '',
-            'a' => "OSt", # Cataloging Source
+            'a' => "IELD", # Cataloging Source
         );
 
         my $personal_name_field = MARC::Field->new(
