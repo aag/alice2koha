@@ -383,7 +383,7 @@ while (my $row = $in_csv->getline_hr($in_fh)) {
                 $year = "19$year";
             }
 
-            $dob = "$day-$month-$year";
+            $dob = "$year-$month-$day";
 
             last;
         }
