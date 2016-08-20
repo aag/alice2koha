@@ -418,7 +418,7 @@ while (my $record = $batch->next()) {
             my $real_title = $1;
             $record->field('245')->update('a' => $real_title);
 
-            $koha_holdings_field->add_subfields('c', LOC_VIDEO_AUDIOBOOKS);
+            $koha_holdings_field->add_subfields('c', LOC_UPSTAIRS);
         } elsif (($item_type eq "AUDIOBOOK" || $item_type eq "DVD")
             && $collection_code =~ "Juvenile.*"
         ) {
