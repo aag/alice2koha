@@ -31,7 +31,7 @@ my $authority_count = 0;
 while (my $line = <$in_fh>) {
     chomp $line;
 
-    if ($line =~ /^\w{6}  (\w.*?)             \s+(\w.*?)\s+(\d\d)\/(\d\d)\/(\d\d\d\d)/) {
+    if ($line =~ /^\w{6}  (\w.*?)             \s+(\w.*?)?\s+(\d\d)\/(\d\d)\/(\d\d\d\d)/) {
         $authority_count++;
 
         my $name = $1;
@@ -42,11 +42,24 @@ while (my $line = <$in_fh>) {
         my $name_length = (length "$authority_count") + (length $name) + 1;
         my $year_short = substr $year, 2, 2;
 
+        if ($name =~ /^(A|AFG|ALG|ARG|AUS|AUT|B|BEL|BIH|BRA|CAM|CAN|CH|China|
+            CHN|CMR|CRO|CZE|CZ|D|DEN|DK|E|EGY|ESP|EU|F|FIN|FR|FRA|GB|GDR|Ger|
+            Germany|GER|GHA|GRE|GUA|HK|HKG|HUN|I|IND|IR|IRL|IRAN|IRN|ISL|ISR|
+            ITA|J|Japan|JAP|JPN|KAZ|KEN|KOR|KSA|KUW|LBR|LBY|LIB|LIE|LUX|MAR|
+            MAS|MEX|MGL|MTN|NED|NGA|NOR|NL|NZ|NZL|PAL|PER|Pl|POL|POR|QAT|ROM|
+            RSA|RUS|SA|SEN|SIN|SP|SUI|SWE|SWI|SWIZ|TR|TUN|TPE|TUR|UAE|UK|
+            US|U\.S\.|\/)+$/x
+        ) {
+            # The publisher field was (ab)used to catalog the country of origin
+            # for DVDs, but we don't want those as publishers in Koha.
+            next;
+        }
+
         my $marc_record = MARC::Record->new();
         $marc_record->leader("002${name_length}nz  a2200109n  4500");
 
         my $control_num_field = MARC::Field->new('001', $authority_count);
-        my $control_num_id_field = MARC::Field->new('003', 'OSt');
+        my $control_num_id_field = MARC::Field->new('003', 'IELD');
         my $last_transaction_field = MARC::Field->new(
             '005',
             "$year$month${day}120000.0"
@@ -59,12 +72,12 @@ while (my $line = <$in_fh>) {
 
         my $cat_source_field = MARC::Field->new(
             '040', '', '',
-            'a' => "OSt", # Cataloging Source
+            'a' => "IELD", # Cataloging Source
         );
 
         my $corporate_name_field = MARC::Field->new(
             '110', '2', '',
-            'a' => $name, # Personal name
+            'b' => $name, # Name of publisher, distributor, etc.
         );
 
         my $type_field = MARC::Field->new(
