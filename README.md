@@ -51,6 +51,7 @@ migration.
   * "Management" -> "Authority Lists" -> "Author”
   * "Management" -> "Authority Lists" -> "Subject”
 10. Prepare the exported files by running these commands on a Linux system:
+  
   ```
   uconv --remove-signature -f UTF-16LE -t UTF-8 -o checkouts.tsv BOREXB00.dat
   iconv -f UTF-16LE -t UTF-8 -o borrowers.tsv BORRWB00.dat
@@ -102,6 +103,7 @@ migration.
 18. Set up the calendar in “Tools” -> “Calendar”. You will have to do this
   manually instead of importing it from Alice.
 19. Rebuild the Zebra search index by running this command on the web server:
+  
   ```
   sudo koha-rebuild-zebra -f --force -u -v INSTANCE_NAME
   ```
@@ -119,6 +121,7 @@ Here are a couple of configuration changes which can be useful:
   `/etc/koha/sites/INSTANCE_NAME/koha-conf.xml` (replace INSTANCE_NAME with the
   name you created during installation.) Go to the end of the file and before
   the line `</config>` insert a new line with this content:
+  
   ```
   <template_cache_dir>/tmp</template_cache_dir>
   ```
@@ -133,6 +136,7 @@ Here are a couple of configuration changes which can be useful:
   To change the number of days the backups are kept for, edit the file
   `/etc/cron.daily/koha-common` on the web server and change the days parameter
   on this line:
+  
   ```
   koha-run-backups --days 2 --output /var/spool/koha
   ```
