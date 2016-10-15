@@ -21,7 +21,8 @@ migration.
 1. Install Koha and create an instance using `koha-create`.
 2. Visit the web address of the new instance and log in as the DB admin user
   * After initial setup the user information is located in
-    /etc/koha/sites/ield/koha-conf.xml in the <user> and <pass> elements
+    /etc/koha/sites/INSTANCE_NAME/koha-conf.xml in the <user> and <pass>
+    elements (replace INSTANCE_NAME with the name you entered in step #1)
 3. Create a library branch ("Administration" -> "Libraries and Groups").
 4. Create your patron categories, but with 0 fees for each category. Otherwise
   all patrons will incur an additional fee on import.
@@ -79,8 +80,9 @@ migration.
 14. Import fines and checkouts
   * Create the directory `~/alice2koha/` on the web server and upload the
     alice2koha folder to it, along with fines.txt and checkouts.txt.
-  * Copy /etc/koha/sites/ield/koha-conf.xml on the web server to
-    ~/alice2koha/ and chown it to your shell user.
+  * Copy /etc/koha/sites/INSTANCE_NAME/koha-conf.xml on the web server to
+    ~/alice2koha/ and chown it to your shell user. (replace INSTANCE_NAME
+    with the name you entered in step #1)
   * Run `./import_checkouts.pl checkouts.tsv`
   * Run `./import_fines.pl fines.txt`
 15. Import authorities
@@ -107,7 +109,7 @@ migration.
   ```
   sudo koha-rebuild-zebra -f --force -u -v INSTANCE_NAME
   ```
-  (Replace INSTANCE_NAME with the one you created in step #1.)
+  (Replace INSTANCE_NAME with the name you entered in step #1)
 
 You should now have a working Koha installation with all of your media, patrons,
 fines and complete checkout history imported from Alice.
@@ -119,7 +121,7 @@ Here are a couple of configuration changes which can be useful:
 1. Enable template caching. This gives a small performance boost to each page
   load. You can enable it by editing this file on the web server:
   `/etc/koha/sites/INSTANCE_NAME/koha-conf.xml` (replace INSTANCE_NAME with the
-  name you created during installation.) Go to the end of the file and before
+  name you entered during installation.) Go to the end of the file and before
   the line `</config>` insert a new line with this content:
   
   ```
