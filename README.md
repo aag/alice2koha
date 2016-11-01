@@ -21,7 +21,7 @@ migration.
 1. Install Koha and create an instance using `koha-create`.
 2. Visit the web address of the new instance and log in as the DB admin user
   * After initial setup the user information is located in
-    /etc/koha/sites/INSTANCE_NAME/koha-conf.xml in the <user> and <pass>
+    /etc/koha/sites/INSTANCE_NAME/koha-conf.xml in the `<user>` and `<pass>`
     elements (replace INSTANCE_NAME with the name you entered in step #1)
 3. Create a library branch ("Administration" -> "Libraries and Groups").
 4. Create your patron categories, but with 0 fees for each category. Otherwise
