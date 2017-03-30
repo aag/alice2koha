@@ -128,6 +128,7 @@ Here are a couple of configuration changes which can be useful:
   <template_cache_dir>/tmp</template_cache_dir>
   ```
   This is even more effective if you mount `/tmp` to a tmpfs in-memory disk.
+
 2. Lengthen the number of days kept by the daily backup. By default, Koha only
   keeps 2 days worth of backups. This means if some data gets accidentally
   destroyed or altered, you only have 48 hours to notice it and restore it
