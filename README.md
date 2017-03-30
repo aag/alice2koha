@@ -119,30 +119,30 @@ Extra Configuration
 Here are a couple of configuration changes which can be useful:
 
 1. Enable template caching. This gives a small performance boost to each page
-  load. You can enable it by editing this file on the web server:
-  `/etc/koha/sites/INSTANCE_NAME/koha-conf.xml` (replace INSTANCE_NAME with the
-  name you entered during installation.) Go to the end of the file and before
-  the line `</config>` insert a new line with this content:
-  
-  ```
-  <template_cache_dir>/tmp</template_cache_dir>
-  ```
-  This is even more effective if you mount `/tmp` to a tmpfs in-memory disk.
+    load. You can enable it by editing this file on the web server:
+    `/etc/koha/sites/INSTANCE_NAME/koha-conf.xml` (replace INSTANCE_NAME with the
+    name you entered during installation.) Go to the end of the file and before
+    the line `</config>` insert a new line with this content:
+
+    ```
+    <template_cache_dir>/tmp</template_cache_dir>
+    ```
+    This is even more effective if you mount `/tmp` to a tmpfs in-memory disk.
 
 2. Lengthen the number of days kept by the daily backup. By default, Koha only
-  keeps 2 days worth of backups. This means if some data gets accidentally
-  destroyed or altered, you only have 48 hours to notice it and restore it
-  from backup. We prefer to have more time, so we keep the last 2 weeks of
-  backups before rotating them. Note: depending on the size of your library,
-  this could use a significant amount of disk space on your web server.
-  
-  To change the number of days the backups are kept for, edit the file
-  `/etc/cron.daily/koha-common` on the web server and change the days parameter
-  on this line:
-  
-  ```
-  koha-run-backups --days 2 --output /var/spool/koha
-  ```
+    keeps 2 days worth of backups. This means if some data gets accidentally
+    destroyed or altered, you only have 48 hours to notice it and restore it
+    from backup. We prefer to have more time, so we keep the last 2 weeks of
+    backups before rotating them. Note: depending on the size of your library,
+    this could use a significant amount of disk space on your web server.
+
+    To change the number of days the backups are kept for, edit the file
+    `/etc/cron.daily/koha-common` on the web server and change the days parameter
+    on this line:
+
+    ```
+    koha-run-backups --days 2 --output /var/spool/koha
+    ```
 
 License
 -------
